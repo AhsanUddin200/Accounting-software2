@@ -130,6 +130,12 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <a class="nav-link" href="process_salaries.php">Process Salaries</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="export_salary_report.php">export_salary_report</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="salary_report.php">salary_report.php</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link active" href="add_income.php">Add Income</a>
                     </li>
                     <li class="nav-item">
