@@ -1,7 +1,9 @@
 <?php
 // admin_dashboard.php
-require 'session.php';
-require 'db.php';
+
+require_once __DIR__ . '/session.php';        // Include session management
+require_once __DIR__ . '/db.php';             // Include database connection
+require_once __DIR__ . '/functions.php';      // Include common functions
 
 // Check if the user is an admin
 if ($_SESSION['role'] != 'admin') {
@@ -66,6 +68,20 @@ if (!$category_count_result) {
 }
 $total_categories = $category_count_result->fetch_assoc()['total_categories'] ?? 0;
 
+// Fetch recent income entries (last 5)
+$recent_income_stmt = $conn->prepare("SELECT description, amount, date FROM transactions WHERE type = 'income' ORDER BY date DESC LIMIT 5");
+if ($recent_income_stmt) {
+    $recent_income_stmt->execute();
+    $recent_income_result = $recent_income_stmt->get_result();
+    $recent_incomes = [];
+    while ($income = $recent_income_result->fetch_assoc()) {
+        $recent_incomes[] = $income;
+    }
+    $recent_income_stmt->close();
+} else {
+    $recent_incomes = [];
+}
+
 // Log dashboard view
 log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accessed the dashboard.');
 ?>
@@ -78,6 +94,9 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
     <style>
         .card { margin: 15px 0; }
         .table-responsive { max-height: 400px; }
+        .btn-custom {
+            width: 200px;
+        }
     </style>
 </head>
 <body>
@@ -85,7 +104,11 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Accounting Software</a>
-            <div class="collapse navbar-collapse">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="manage_users.php">Manage Users</a>
@@ -98,6 +121,16 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="financial_reports.php">Financial Reports</a>
+                    </li>
+                    <!-- Added Manage Salaries and Process Salaries to Navigation -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="manage_salaries.php">Manage Salaries</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="process_salaries.php">Process Salaries</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="add_income.php">Add Income</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link active" href="admin_dashboard.php">Dashboard</a>
@@ -164,8 +197,6 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="row mt-2">
             <div class="col-md-12">
                 <div class="card text-white bg-dark">
                     <div class="card-body">
@@ -173,6 +204,17 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <p class="card-text" style="font-size: 2em;">$<?php echo number_format($net_balance, 2); ?></p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions: Manage Salaries and Process Salaries -->
+        <div class="mt-5">
+            <h3>Quick Actions</h3>
+            <div class="d-flex gap-3 flex-wrap">
+                <a href="manage_salaries.php" class="btn btn-primary btn-custom">Manage Salaries</a>
+                <a href="process_salaries.php" class="btn btn-success btn-custom">Process Salaries</a>
+                <a href="view_audit_logs.php" class="btn btn-secondary btn-custom">View Audit Logs</a>
+                <a href="financial_reports.php" class="btn btn-info btn-custom">Financial Reports</a>
             </div>
         </div>
 
@@ -210,6 +252,33 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                 </table>
             </div>
             <a href="view_audit_logs.php" class="btn btn-secondary">View All Audit Logs</a>
+        </div>
+
+        <!-- Recent Income Entries -->
+        <div class="mt-5">
+            <h3>Recent Income Entries</h3>
+            <?php if (!empty($recent_incomes)): ?>
+                <table class="table table-bordered table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount ($)</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($recent_incomes as $income): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($income['description']); ?></td>
+                                <td><?php echo number_format($income['amount'], 2); ?></td>
+                                <td><?php echo htmlspecialchars($income['date']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>No recent income entries found.</p>
+            <?php endif; ?>
         </div>
     </div>
 

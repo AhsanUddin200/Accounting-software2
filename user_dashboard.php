@@ -73,6 +73,31 @@ if (empty($avatar_path)) {
     $avatar_path = 'uploads/avatars/default_avatar.png';
 }
 
+// Fetch unread notifications
+$notif_stmt = $conn->prepare("SELECT id, message, timestamp FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY timestamp DESC");
+if ($notif_stmt) {
+    $notif_stmt->bind_param("i", $_SESSION['user_id']);
+    $notif_stmt->execute();
+    $notif_result = $notif_stmt->get_result();
+    $notifications = [];
+    while ($row = $notif_result->fetch_assoc()) {
+        $notifications[] = $row;
+    }
+    $notif_stmt->close();
+} else {
+    $notifications = [];
+}
+
+// Mark notifications as read
+if (count($notifications) > 0) {
+    $update_notif_stmt = $conn->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?");
+    if ($update_notif_stmt) {
+        $update_notif_stmt->bind_param("i", $_SESSION['user_id']);
+        $update_notif_stmt->execute();
+        $update_notif_stmt->close();
+    }
+}
+
 // Log dashboard view
 log_action($conn, $_SESSION['user_id'], 'Viewed User Dashboard', 'User accessed the dashboard.');
 ?>
@@ -104,9 +129,6 @@ log_action($conn, $_SESSION['user_id'], 'Viewed User Dashboard', 'User accessed 
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                <li class="nav-item">
-                        <a class="nav-link active" href="user_dashboard.php">Dashboard</a>
-                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="view_transactions.php">View Transactions</a>
                     </li>
@@ -119,11 +141,32 @@ log_action($conn, $_SESSION['user_id'], 'Viewed User Dashboard', 'User accessed 
                     <li class="nav-item">
                         <a class="nav-link" href="edit_profile.php">Edit Profile</a>
                     </li>
-                  
+                    <li class="nav-item">
+                        <a class="nav-link active" href="user_dashboard.php">Dashboard</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-bell"></i>
+                            <?php if (count($notifications) > 0): ?>
+                                <span class="badge bg-danger"><?php echo count($notifications); ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
+                            <?php if (count($notifications) > 0): ?>
+                                <?php foreach ($notifications as $notif): ?>
+                                    <li><a class="dropdown-item" href="#"><?php echo htmlspecialchars($notif['message']); ?></a></li>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <li><a class="dropdown-item" href="#">No new notifications.</a></li>
+                            <?php endif; ?>
+                        </ul>
+                    </li>
                     <li class="nav-item d-flex align-items-center">
                         <img src="<?php echo htmlspecialchars($avatar_path); ?>" alt="Avatar" class="avatar-img me-2">
                         <span class="nav-link">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</span>
-                      
+                        <a class="nav-link ms-2" href="logout.php">Logout</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -184,8 +227,10 @@ log_action($conn, $_SESSION['user_id'], 'Viewed User Dashboard', 'User accessed 
                                 <tr>
                                     <td><?php echo htmlspecialchars($transaction['id']); ?></td>
                                     <td>$<?php echo number_format($transaction['amount'], 2); ?></td>
-                                    <td><?php echo ucfirst(htmlspecialchars($transaction['type'])); ?></td>
-                                    <td><?php echo htmlspecialchars($transaction['category_name']); ?></td>
+                                    <td class="<?php echo ($transaction['type'] == 'income' && $transaction['description'] == 'Monthly Salary') ? 'text-success fw-bold' : ''; ?>">
+                                        <?php echo ucfirst(htmlspecialchars($transaction['type'])); ?>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($transaction['category_name'] ?? 'Salary'); ?></td>
                                     <td><?php echo htmlspecialchars($transaction['date']); ?></td>
                                     <td><?php echo htmlspecialchars($transaction['description']); ?></td>
                                     <td>
@@ -207,7 +252,15 @@ log_action($conn, $_SESSION['user_id'], 'Viewed User Dashboard', 'User accessed 
         </div>
     </div>
 
-    <!-- Include Bootstrap JS (Optional) -->
+    <!-- Include Bootstrap JS and Icons (Optional) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize Bootstrap tooltips if needed
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    </script>
 </body>
 </html>

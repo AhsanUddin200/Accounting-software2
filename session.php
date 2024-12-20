@@ -1,7 +1,8 @@
 <?php
 // session.php
 session_start();
-require 'db.php';
+require_once 'db.php';          // Include database connection
+require_once 'functions.php';   // Include common functions
 
 // Redirect to login page if not logged in
 if (!isset($_SESSION['user_id'])) {
@@ -9,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Prepare the SQL statement
+// Prepare the SQL statement to fetch user role
 $stmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
 if (!$stmt) {
     die("Prepare failed (session.php): (" . $conn->errno . ") " . $conn->error);
@@ -40,17 +41,8 @@ $stmt->close();
 // Store role in session
 $_SESSION['role'] = $user_role;
 
-// Function to log actions
-function log_action($conn, $user_id, $action, $details = '') {
-    $stmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)");
-    if (!$stmt) {
-        // Optionally log this error to a file instead of displaying it
-        return;
-    }
-    $stmt->bind_param("iss", $user_id, $action, $details);
-    if (!$stmt->execute()) {
-        // Optionally log this error to a file instead of displaying it
-    }
-    $stmt->close();
+// Generate CSRF token if not set
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 ?>
