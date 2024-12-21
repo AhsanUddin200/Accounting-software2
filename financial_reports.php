@@ -124,130 +124,477 @@ if ($_SESSION['role'] == 'admin') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Financial Reports</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        /* Basic styling */
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
-        .container { width: 90%; margin: 20px auto; padding: 20px; background: #fff; border-radius: 5px; }
-        h2 { text-align: center; }
-        .report-section { margin-bottom: 40px; }
-        .report-section h3 { margin-bottom: 10px; }
-        .report-details { padding: 15px; background-color: #f9f9f9; border-radius: 4px; }
-        .report-details p { font-size: 18px; margin: 5px 0; }
-        form { margin-bottom: 20px; }
-        input, select { padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
-        input[type="submit"] { background: #5bc0de; border: none; color: #fff; cursor: pointer; padding: 10px 20px; }
-        input[type="submit"]:hover { background: #31b0d5; }
-        .message { padding: 10px; margin-bottom: 20px; border-radius: 4px; }
-        .error { background-color: #f2dede; color: #a94442; }
-        .back-button { text-align: center; margin-top: 20px; }
-        .back-button a { 
-            padding: 10px 20px; 
-            background-color: #5bc0de; 
-            color: #fff; 
-            text-decoration: none; 
-            border-radius: 4px; 
+        :root {
+            --primary: #2C3E50;
+            --secondary: #34495E;
+            --success: #27AE60;
+            --danger: #C0392B;
+            --gray-100: #F7FAFC;
+            --gray-200: #EDF2F7;
+            --gray-300: #E2E8F0;
+            --gray-400: #CBD5E0;
+            --gray-500: #A0AEC0;
+            --gray-600: #718096;
+            --gray-700: #4A5568;
+            --gray-800: #2D3748;
+            --gray-900: #1A202C;
         }
-        .back-button a:hover { background-color: #31b0d5; }
-        .export-buttons { margin-top: 20px; }
-        .export-buttons form { display: inline-block; margin-right: 10px; }
+
+        body {
+            background-color: var(--gray-100);
+            font-family: 'Segoe UI', sans-serif;
+            color: var(--gray-800);
+        }
+
+        /* Header */
+        .page-header {
+            background: var(--primary);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        /* Report Cards */
+        .report-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .stats-card {
+            background: linear-gradient(to right, var(--gray-800), var(--gray-700));
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+
+        .stats-label {
+            color: var(--gray-400);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid var(--gray-300);
+            padding: 0.75rem 1rem;
+            background-color: white;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--gray-600);
+            box-shadow: 0 0 0 3px rgba(113, 128, 150, 0.2);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--gray-800);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--gray-900);
+            transform: translateY(-1px);
+        }
+
+        .btn-export {
+            background: var(--gray-600);
+            color: white;
+            border: none;
+        }
+
+        .btn-export:hover {
+            background: var(--gray-700);
+            transform: translateY(-1px);
+        }
+
+        /* Income/Expense Indicators */
+        .income-text {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .expense-text {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .balance-text {
+            color: #3498db ;
+            font-weight: 600;
+        }
+
+        /* Admin Section */
+        .admin-section {
+            background: var(--gray-100);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 1px solid var(--gray-300);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .stats-card {
+                margin-bottom: 1rem;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Financial Reports</h2>
+    <!-- Header -->
+    <div class="page-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">Financial Reports</h1>
+                <a href="user_dashboard.php" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
 
-        <!-- Display Error Messages -->
+    <div class="container">
+        <!-- Display Success or Error Messages -->
         <?php if (!empty($error)): ?>
-            <div class="message error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php echo htmlspecialchars($error); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         <?php endif; ?>
 
-        <!-- User Financial Report -->
-        <div class="report-section">
-            <h3>Your Financial Report</h3>
-            <form method="GET" action="financial_reports.php">
-                <label for="start_date">From:</label>
-                <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
-
-                <label for="end_date">To:</label>
-                <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
-
-                <input type="submit" value="Filter">
-                <a href="financial_reports.php"><input type="button" value="Reset"></a>
-            </form>
-
-            <div class="report-details">
-                <p><strong>Total Income:</strong> <?php echo "$" . number_format($income, 2); ?></p>
-                <p><strong>Total Expenses:</strong> <?php echo "$" . number_format($expenses, 2); ?></p>
-                <p><strong>Net Balance:</strong> <?php echo "$" . number_format($balance, 2); ?></p>
+        <!-- Financial Overview -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-label">Total Income</div>
+                    <div class="stats-value income-text">
+                        $<?php echo number_format($income, 2); ?>
+                    </div>
+                </div>
             </div>
-
-            <!-- Export Button -->
-            <div class="export-buttons">
-                <form method="POST" action="export_report.php">
-                    <input type="hidden" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
-                    <input type="hidden" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
-                    <input type="submit" name="export_user_report" value="Export Your Report as CSV">
-                </form>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-label">Total Expenses</div>
+                    <div class="stats-value expense-text">
+                        $<?php echo number_format($expenses, 2); ?>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-label">Net Balance</div>
+                    <div class="stats-value balance-text">
+                        $<?php echo number_format($balance, 2); ?>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Admin Financial Report -->
-        <?php if ($_SESSION['role'] == 'admin'): ?>
-            <div class="report-section">
-                <h3>Admin Financial Report</h3>
-                <form method="GET" action="financial_reports.php">
-                    <input type="hidden" name="admin_export" value="1">
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="start_date" 
+                           value="<?php echo htmlspecialchars($start_date); ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" name="end_date" 
+                           value="<?php echo htmlspecialchars($end_date); ?>">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                    <a href="financial_reports.php" class="btn btn-secondary">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </a>
+                </div>
+            </form>
+        </div>
 
-                    <label for="user_id">User:</label>
-                    <select id="user_id" name="user_id" required>
-                        <option value="">Select User</option>
+        <!-- Export Section -->
+        <div class="report-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Export Reports</h4>
+                <form method="POST" action="export_report.php">
+                    <input type="hidden" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
+                    <input type="hidden" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
+                    <button type="submit" name="export_user_report" class="btn btn-export">
+                        <i class="bi bi-download"></i> Export as CSV
+                    </button>
+                </form>
+            </div>
+            <!-- Chart for User Reports -->
+            <canvas id="userReportChart" height="100"></canvas>
+        </div>
+
+        <!-- Admin Section -->
+        <?php if ($_SESSION['role'] == 'admin'): ?>
+        <div class="admin-section">
+            <h4 class="mb-4">Admin Reports</h4>
+            <form method="GET" class="row g-3">
+                <input type="hidden" name="admin_export" value="1">
+                
+                <div class="col-md-3">
+                    <label class="form-label">Select User</label>
+                    <select class="form-select" name="user_id" required>
+                        <option value="">Choose user...</option>
                         <?php foreach ($users as $user): ?>
-                            <option value="<?php echo htmlspecialchars($user['id']); ?>" <?php echo (isset($_GET['user_id']) && $_GET['user_id'] == $user['id']) ? 'selected' : ''; ?>>
+                            <option value="<?php echo $user['id']; ?>" 
+                                <?php echo (isset($_GET['user_id']) && $_GET['user_id'] == $user['id']) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($user['username']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="start_date_admin" 
+                           value="<?php echo isset($_GET['start_date_admin']) ? htmlspecialchars($_GET['start_date_admin']) : ''; ?>">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" name="end_date_admin" 
+                           value="<?php echo isset($_GET['end_date_admin']) ? htmlspecialchars($_GET['end_date_admin']) : ''; ?>">
+                </div>
+                
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                </div>
+            </form>
 
-                    <label for="start_date_admin">From:</label>
-                    <input type="date" id="start_date_admin" name="start_date_admin" value="<?php echo isset($_GET['start_date_admin']) ? htmlspecialchars($_GET['start_date_admin']) : ''; ?>">
-
-                    <label for="end_date_admin">To:</label>
-                    <input type="date" id="end_date_admin" name="end_date_admin" value="<?php echo isset($_GET['end_date_admin']) ? htmlspecialchars($_GET['end_date_admin']) : ''; ?>">
-
-                    <input type="submit" value="Generate Report">
-                    <a href="financial_reports.php"><input type="button" value="Reset"></a>
-                </form>
-
-                <?php if (isset($_GET['admin_export'])): ?>
-                    <div class="report-details">
-                        <p><strong>Total Income:</strong> <?php echo "$" . number_format($admin_income, 2); ?></p>
-                        <p><strong>Total Expenses:</strong> <?php echo "$" . number_format($admin_expenses, 2); ?></p>
-                        <p><strong>Net Balance:</strong> <?php echo "$" . number_format($admin_balance, 2); ?></p>
+            <?php if (isset($_GET['admin_export'])): ?>
+                <div class="report-card mt-4">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="stats-label">Total Income</div>
+                            <div class="stats-value income-text">
+                                $<?php echo number_format($admin_income, 2); ?>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stats-label">Total Expenses</div>
+                            <div class="stats-value expense-text">
+                                $<?php echo number_format($admin_expenses, 2); ?>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stats-label">Net Balance</div>
+                            <div class="stats-value balance-text">
+                                $<?php echo number_format($admin_balance, 2); ?>
+                            </div>
+                        </div>
                     </div>
-
-                    <!-- Export Button for Admin -->
-                    <div class="export-buttons">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Export Admin Report</h5>
                         <form method="POST" action="export_report.php">
                             <input type="hidden" name="admin_export" value="1">
                             <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($selected_user); ?>">
                             <input type="hidden" name="start_date_admin" value="<?php echo htmlspecialchars($start_date_admin); ?>">
                             <input type="hidden" name="end_date_admin" value="<?php echo htmlspecialchars($end_date_admin); ?>">
-                            <input type="submit" name="export_admin_report" value="Export Admin Report as CSV">
+                            <button type="submit" name="export_admin_report" class="btn btn-export">
+                                <i class="bi bi-download"></i> Export as CSV
+                            </button>
                         </form>
                     </div>
-                <?php endif; ?>
-            </div>
+                    <!-- Chart for Admin Reports -->
+                    <canvas id="adminReportChart" height="100"></canvas>
+                </div>
+            <?php endif; ?>
+        </div>
         <?php endif; ?>
 
-        <!-- Back Button -->
-        <div class="back-button">
-            <a href="<?php echo ($_SESSION['role'] == 'admin') ? 'admin_dashboard.php' : 'user_dashboard.php'; ?>">Back to Dashboard</a>
+        <!-- Charts Section -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="report-card">
+                    <h5 class="mb-4">Income vs Expenses Over Time</h5>
+                    <canvas id="incomeExpenseChart" height="100"></canvas>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Chart.js Scripts -->
+    <script>
+        // User Report Chart
+        <?php if (!empty($start_date) && !empty($end_date)): ?>
+            // Fetch data for the chart (e.g., monthly breakdown)
+            // For simplicity, we'll use total income and expenses
+            const userReportCtx = document.getElementById('userReportChart').getContext('2d');
+            const userReportChart = new Chart(userReportCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Income', 'Expenses'],
+                    datasets: [{
+                        data: [<?php echo $income; ?>, <?php echo $expenses; ?>],
+                        backgroundColor: ['#27AE60', '#C0392B'],
+                        hoverBackgroundColor: ['#2ECC71', '#E74C3C']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: false,
+                        }
+                    }
+                },
+            });
+        <?php endif; ?>
+
+        // Admin Report Chart
+        <?php if ($_SESSION['role'] == 'admin' && isset($_GET['admin_export'])): ?>
+            const adminReportCtx = document.getElementById('adminReportChart').getContext('2d');
+            const adminReportChart = new Chart(adminReportCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Income', 'Expenses'],
+                    datasets: [{
+                        data: [<?php echo $admin_income; ?>, <?php echo $admin_expenses; ?>],
+                        backgroundColor: ['#27AE60', '#C0392B'],
+                        hoverBackgroundColor: ['#2ECC71', '#E74C3C']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: false,
+                        }
+                    }
+                },
+            });
+        <?php endif; ?>
+
+        // Overall Income vs Expenses Chart
+        <?php
+        // Fetch data for the overall chart
+        // Here we can create monthly data for the past 6 months
+        $months = [];
+        $income_data = [];
+        $expense_data = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = date('Y-m', strtotime("-$i months"));
+            $months[] = date('M Y', strtotime($month));
+
+            // Income
+            $stmt = $conn->prepare("SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'income' AND DATE_FORMAT(date, '%Y-%m') = ?");
+            $stmt->bind_param("is", $_SESSION['user_id'], $month);
+            $stmt->execute();
+            $stmt->bind_result($monthly_income);
+            $stmt->fetch();
+            $income_data[] = $monthly_income ? $monthly_income : 0;
+            $stmt->close();
+
+            // Expenses
+            $stmt = $conn->prepare("SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'expense' AND DATE_FORMAT(date, '%Y-%m') = ?");
+            $stmt->bind_param("is", $_SESSION['user_id'], $month);
+            $stmt->execute();
+            $stmt->bind_result($monthly_expenses);
+            $stmt->fetch();
+            $expense_data[] = $monthly_expenses ? $monthly_expenses : 0;
+            $stmt->close();
+        }
+        ?>
+
+        const incomeExpenseCtx = document.getElementById('incomeExpenseChart').getContext('2d');
+        const incomeExpenseChart = new Chart(incomeExpenseCtx, {
+            type: 'bar',
+            data: {
+                labels: <?php echo json_encode($months); ?>,
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: <?php echo json_encode($income_data); ?>,
+                        backgroundColor: '#27AE60',
+                    },
+                    {
+                        label: 'Expenses',
+                        data: <?php echo json_encode($expense_data); ?>,
+                        backgroundColor: '#C0392B',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Income vs Expenses Over the Past 6 Months'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            },
+        });
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -25,24 +25,29 @@ $where_clauses = [];
 $params = [];
 $types = "";
 
+// Always filter by user_id
+$where_clauses[] = "transactions.user_id = ?";
+$params[] = $_SESSION['user_id'];
+$types .= "i";
+
 if ($_SERVER['REQUEST_METHOD'] == 'GET') {
     // Filter by type
     if (!empty($_GET['type'])) {
-        $where_clauses[] = "type = ?";
+        $where_clauses[] = "transactions.type = ?";
         $params[] = $_GET['type'];
         $types .= "s";
     }
 
     // Filter by category
     if (!empty($_GET['category'])) {
-        $where_clauses[] = "category_id = ?";
+        $where_clauses[] = "transactions.category_id = ?";
         $params[] = $_GET['category'];
         $types .= "i";
     }
 
     // Filter by date range
     if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
-        $where_clauses[] = "date BETWEEN ? AND ?";
+        $where_clauses[] = "transactions.date BETWEEN ? AND ?";
         $params[] = $_GET['start_date'];
         $params[] = $_GET['end_date'];
         $types .= "ss";
@@ -53,16 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
 $query = "SELECT transactions.id, transactions.amount, transactions.type, categories.name AS category, transactions.date, transactions.description
           FROM transactions
           JOIN categories ON transactions.category_id = categories.id
-          WHERE user_id = ?";
-
-$params[] = $_SESSION['user_id'];
-$types .= "i";
-
-if (!empty($where_clauses)) {
-    $query .= " AND " . implode(" AND ", $where_clauses);
-}
-
-$query .= " ORDER BY transactions.date DESC";
+          WHERE " . implode(" AND ", $where_clauses) . "
+          ORDER BY transactions.date DESC";
 
 // Prepare and execute the statement
 $stmt = $conn->prepare($query);
@@ -79,117 +76,310 @@ if ($stmt) {
 } else {
     die("Error preparing statement: " . $conn->error);
 }
-?>
 
+// Handle Deletion (Optional)
+if (isset($_GET['delete'])) {
+    $delete_id = intval($_GET['delete']);
+    // Ensure the transaction belongs to the user
+    $delete_stmt = $conn->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
+    if ($delete_stmt) {
+        $delete_stmt->bind_param("ii", $delete_id, $_SESSION['user_id']);
+        if ($delete_stmt->execute()) {
+            if ($delete_stmt->affected_rows > 0) {
+                $success = "Transaction deleted successfully.";
+            } else {
+                $error = "No such transaction found.";
+            }
+        } else {
+            $error = "Error deleting transaction: " . $delete_stmt->error;
+        }
+        $delete_stmt->close();
+    } else {
+        $error = "Prepare failed for deletion: " . $conn->error;
+    }
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
     <title>View Transactions</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        /* Basic styling */
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
-        .container { width: 95%; margin: 20px auto; padding: 20px; background: #fff; border-radius: 5px; }
-        h2 { text-align: center; }
-        .message { padding: 10px; margin-bottom: 20px; border-radius: 4px; }
-        .success { background-color: #dff0d8; color: #3c763d; }
-        .error { background-color: #f2dede; color: #a94442; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        table, th, td { border: 1px solid #ccc; }
-        th, td { padding: 10px; text-align: left; }
-        th { background-color: #f9f9f9; }
-        form { margin-bottom: 30px; }
-        input, select { padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
-        input[type="submit"] { background: #5bc0de; border: none; color: #fff; cursor: pointer; }
-        input[type="submit"]:hover { background: #31b0d5; }
-        .delete-button { color: #a94442; text-decoration: none; }
-        .delete-button:hover { text-decoration: underline; }
-        .edit-button { color: #337ab7; text-decoration: none; }
-        .edit-button:hover { text-decoration: underline; }
-        .back-button { text-align: center; margin-top: 20px; }
-        .back-button a { 
-            padding: 10px 20px; 
-            background-color: #5bc0de; 
-            color: #fff; 
-            text-decoration: none; 
-            border-radius: 4px; 
+        :root {
+            --primary: #2C3E50;
+            --success: #2ECC71;
+            --danger: #E74C3C;
         }
-        .back-button a:hover { background-color: #31b0d5; }
-        .filter-section { margin-bottom: 20px; }
-        .filter-section label { margin-right: 10px; }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .page-header {
+            background: var(--primary);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .filter-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+        }
+
+        .transactions-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25);
+        }
+
+        .btn-filter {
+            background: var(--primary);
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+        }
+
+        .btn-filter:hover {
+            background: #34495E;
+            color: white;
+        }
+
+        .btn-reset {
+            background: #95a5a6;
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        .badge-income {
+            background-color: var(--success);
+            color: white;
+            padding: 0.5em 1em;
+            border-radius: 6px;
+        }
+
+        .badge-expense {
+            background-color: var(--danger);
+            color: white;
+            padding: 0.5em 1em;
+            border-radius: 6px;
+        }
+
+        .amount-income {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .amount-expense {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            color: white;
+            text-decoration: none;
+            margin-right: 0.5rem;
+        }
+
+        .btn-edit {
+            background: #3498db;
+        }
+
+        .btn-delete {
+            background: var(--danger);
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">Transaction History</h1>
+                <a href="add_transaction.php" class="btn btn-light">
+                    <i class="bi bi-plus-lg"></i> New Transaction
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
-        <h2>View Transactions</h2>
+        <!-- Display Success or Error Messages -->
+        <?php if (!empty($success)): ?>
+            <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+        <?php endif; ?>
 
-        <!-- Filter Form -->
-        <div class="filter-section">
-            <form method="GET" action="view_transactions.php">
-                <label for="type">Type:</label>
-                <select id="type" name="type">
-                    <option value="">All</option>
-                    <option value="income" <?php echo (isset($_GET['type']) && $_GET['type'] == 'income') ? 'selected' : ''; ?>>Income</option>
-                    <option value="expense" <?php echo (isset($_GET['type']) && $_GET['type'] == 'expense') ? 'selected' : ''; ?>>Expense</option>
-                </select>
+        <?php if (!empty($error)): ?>
+            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
 
-                <label for="category">Category:</label>
-                <select id="category" name="category">
-                    <option value="">All</option>
-                    <?php foreach ($categories as $category): ?>
-                        <option value="<?php echo htmlspecialchars($category['id']); ?>" <?php echo (isset($_GET['category']) && $_GET['category'] == $category['id']) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($category['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+        <!-- Filter Section -->
+        <div class="filter-card">
+            <form method="GET" action="" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Transaction Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="income" <?php echo (isset($_GET['type']) && $_GET['type'] == 'income') ? 'selected' : ''; ?>>Income</option>
+                        <option value="expense" <?php echo (isset($_GET['type']) && $_GET['type'] == 'expense') ? 'selected' : ''; ?>>Expense</option>
+                    </select>
+                </div>
 
-                <label for="start_date">From:</label>
-                <input type="date" id="start_date" name="start_date" value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : ''; ?>">
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        <?php foreach ($categories as $category): ?>
+                            <option value="<?php echo $category['id']; ?>" 
+                                <?php echo (isset($_GET['category']) && $_GET['category'] == $category['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($category['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                <label for="end_date">To:</label>
-                <input type="date" id="end_date" name="end_date" value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : ''; ?>">
+                <div class="col-md-2">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" 
+                           value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : ''; ?>">
+                </div>
 
-                <input type="submit" value="Filter">
-                <a href="view_transactions.php"><input type="button" value="Reset"></a>
+                <div class="col-md-2">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" 
+                           value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : ''; ?>">
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="d-grid gap-2 w-100">
+                        <button type="submit" class="btn btn-filter">
+                            <i class="bi bi-funnel"></i> Filter
+                        </button>
+                        <a href="view_transactions.php" class="btn btn-reset">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset
+                        </a>
+                    </div>
+                </div>
             </form>
         </div>
 
         <!-- Transactions Table -->
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Amount</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Actions</th>
-            </tr>
+        <div class="transactions-card">
             <?php if (count($transactions) > 0): ?>
-                <?php foreach ($transactions as $transaction): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($transaction['id']); ?></td>
-                        <td><?php echo htmlspecialchars(number_format($transaction['amount'], 2)); ?></td>
-                        <td><?php echo htmlspecialchars(ucfirst($transaction['type'])); ?></td>
-                        <td><?php echo htmlspecialchars($transaction['category']); ?></td>
-                        <td><?php echo htmlspecialchars($transaction['date']); ?></td>
-                        <td><?php echo htmlspecialchars($transaction['description']); ?></td>
-                        <td>
-                            <a href="edit_transaction.php?id=<?php echo $transaction['id']; ?>" class="edit-button">Edit</a> | 
-                            <a href="view_transactions.php?delete=<?php echo $transaction['id']; ?>" class="delete-button" onclick="return confirm('Are you sure you want to delete this transaction?');">Delete</a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($transactions as $transaction): ?>
+                                <tr>
+                                    <td><?php echo date('M d, Y', strtotime($transaction['date'])); ?></td>
+                                    <td><?php echo htmlspecialchars($transaction['description']); ?></td>
+                                    <td><?php echo htmlspecialchars($transaction['category']); ?></td>
+                                    <td class="amount-<?php echo $transaction['type']; ?>">
+                                        <?php echo ($transaction['type'] == 'income' ? '+' : '-'); ?>
+                                        $<?php echo number_format($transaction['amount'], 2); ?>
+                                    </td>
+                                    <td>
+                                        <span class="<?php echo ($transaction['type'] == 'income') ? 'badge-income' : 'badge-expense'; ?>">
+                                            <?php echo ucfirst($transaction['type']); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="edit_transaction.php?id=<?php echo $transaction['id']; ?>" 
+                                           class="action-btn btn-edit" title="Edit Transaction">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="view_transactions.php?delete=<?php echo $transaction['id']; ?>" 
+                                           class="action-btn btn-delete"
+                                           onclick="return confirm('Are you sure you want to delete this transaction?');"
+                                           title="Delete Transaction">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php else: ?>
-                <tr>
-                    <td colspan="7">No transactions found.</td>
-                </tr>
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <h4>No Transactions Found</h4>
+                    <p>Try adjusting your filters or add a new transaction.</p>
+                </div>
             <?php endif; ?>
-        </table>
+        </div>
 
         <!-- Back Button -->
-        <div class="back-button">
-            <a href="user_dashboard.php">Back to Dashboard</a>
+        <div class="mt-4 text-center">
+            <a href="user_dashboard.php" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

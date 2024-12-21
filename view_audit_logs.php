@@ -58,6 +58,8 @@ $stmt->close();
     <title>View Audit Logs</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Add Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .table-responsive {
             max-height: 600px;
@@ -69,9 +71,11 @@ $stmt->close();
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">Accounting Software</a>
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-calculator me-2"></i>Financial Management System
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
                 aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -79,31 +83,49 @@ $stmt->close();
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="admin_dashboard.php">Dashboard</a>
+                        <a class="nav-link" href="admin_dashboard.php">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="manage_users.php">Manage Users</a>
+                        <a class="nav-link" href="manage_users.php">
+                            <i class="fas fa-users me-1"></i>Manage Users
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="manage_transactions.php">Manage Transactions</a>
+                        <a class="nav-link" href="manage_transactions.php">
+                            <i class="fas fa-exchange-alt me-1"></i>Transactions
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="manage_categories.php">Manage Categories</a>
+                        <a class="nav-link" href="manage_categories.php">
+                            <i class="fas fa-tags me-1"></i>Categories
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="manage_salaries.php">Manage Salaries</a>
+                        <a class="nav-link" href="manage_salaries.php">
+                            <i class="fas fa-money-check-alt me-1"></i>Manage Salaries
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="process_salaries.php">Process Salaries</a>
+                        <a class="nav-link" href="process_salaries.php">
+                            <i class="fas fa-money-bill-wave me-1"></i>Process Salaries
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="financial_reports.php">Financial Reports</a>
+                        <a class="nav-link" href="financial_reports.php">
+                            <i class="fas fa-chart-bar me-1"></i>Financial Reports
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="view_audit_logs.php">View Audit Logs</a>
+                        <a class="nav-link active" href="view_audit_logs.php">
+                            <i class="fas fa-history me-1"></i>Audit Logs
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</a>
+                        <a class="nav-link" href="logout.php">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)
+                        </a>
                     </li>
                 </ul>
             </div>

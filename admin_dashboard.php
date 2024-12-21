@@ -1,11 +1,11 @@
 <?php
 // admin_dashboard.php
 
-require_once __DIR__ . '/session.php';        // Include session management
-require_once __DIR__ . '/db.php';             // Include database connection
-require_once __DIR__ . '/functions.php';      // Include common functions
+require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/functions.php';
 
-// Check if the user is an admin
+// Security check
 if ($_SESSION['role'] != 'admin') {
     header("Location: user_dashboard.php");
     exit();
@@ -13,282 +13,485 @@ if ($_SESSION['role'] != 'admin') {
 
 // Fetch total number of users
 $user_count_result = $conn->query("SELECT COUNT(*) as total_users FROM users");
-if (!$user_count_result) {
-    die("Query failed (Total Users): (" . $conn->errno . ") " . $conn->error);
-}
 $user_count = $user_count_result->fetch_assoc()['total_users'] ?? 0;
 
-// Fetch total income across all users
+// Fetch total income
 $income_result = $conn->query("SELECT SUM(amount) as total_income FROM transactions WHERE type = 'income'");
-if (!$income_result) {
-    die("Query failed (Total Income): (" . $conn->errno . ") " . $conn->error);
-}
 $total_income = $income_result->fetch_assoc()['total_income'] ?? 0;
 
-// Fetch total expenses across all users
+// Fetch total expenses
 $expense_result = $conn->query("SELECT SUM(amount) as total_expenses FROM transactions WHERE type = 'expense'");
-if (!$expense_result) {
-    die("Query failed (Total Expenses): (" . $conn->errno . ") " . $conn->error);
-}
 $total_expenses = $expense_result->fetch_assoc()['total_expenses'] ?? 0;
 
 // Calculate net balance
 $net_balance = $total_income - $total_expenses;
 
-// Fetch recent audit logs (last 5)
+// Fetch recent audit logs
 $stmt = $conn->prepare("SELECT audit_logs.*, users.username FROM audit_logs 
                         LEFT JOIN users ON audit_logs.user_id = users.id 
                         ORDER BY audit_logs.timestamp DESC LIMIT 5");
-if (!$stmt) {
-    die("Prepare failed (Audit Logs): (" . $conn->errno . ") " . $conn->error);
-}
-
-if (!$stmt->execute()) {
-    die("Execute failed (Audit Logs): (" . $stmt->errno . ") " . $stmt->error);
-}
-
+$stmt->execute();
 $result = $stmt->get_result();
-$recent_logs = [];
-while ($row = $result->fetch_assoc()) {
-    $recent_logs[] = $row;
-}
+$recent_logs = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Fetch total number of transactions
+// Fetch statistics
 $transaction_count_result = $conn->query("SELECT COUNT(*) as total_transactions FROM transactions");
-if (!$transaction_count_result) {
-    die("Query failed (Total Transactions): (" . $conn->errno . ") " . $conn->error);
-}
 $total_transactions = $transaction_count_result->fetch_assoc()['total_transactions'] ?? 0;
 
-// Fetch total number of categories
 $category_count_result = $conn->query("SELECT COUNT(*) as total_categories FROM categories");
-if (!$category_count_result) {
-    die("Query failed (Total Categories): (" . $conn->errno . ") " . $conn->error);
-}
 $total_categories = $category_count_result->fetch_assoc()['total_categories'] ?? 0;
 
-// Fetch recent income entries (last 5)
-$recent_income_stmt = $conn->prepare("SELECT description, amount, date FROM transactions WHERE type = 'income' ORDER BY date DESC LIMIT 5");
-if ($recent_income_stmt) {
-    $recent_income_stmt->execute();
-    $recent_income_result = $recent_income_stmt->get_result();
-    $recent_incomes = [];
-    while ($income = $recent_income_result->fetch_assoc()) {
-        $recent_incomes[] = $income;
-    }
-    $recent_income_stmt->close();
-} else {
-    $recent_incomes = [];
-}
+// Fetch recent income entries
+$recent_income_stmt = $conn->prepare("SELECT description, amount, date FROM transactions 
+                                    WHERE type = 'income' ORDER BY date DESC LIMIT 5");
+$recent_income_stmt->execute();
+$recent_incomes = $recent_income_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$recent_income_stmt->close();
 
 // Log dashboard view
 log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accessed the dashboard.');
 ?>
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Dashboard</title>
-    <!-- Include Bootstrap CSS for styling (Optional but recommended) -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Financial Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .card { margin: 15px 0; }
-        .table-responsive { max-height: 400px; }
-        .btn-custom {
-            width: 200px;
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #4bb543;
+            --info-color: #4895ef;
+            --warning-color: #f72585;
+            --danger-color: #ef233c;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+
+        body {
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            transform: translateY(-1px);
+        }
+
+        .dashboard-card {
+            border-radius: 15px;
+            border: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-card {
+            padding: 1.5rem;
+            border-radius: 15px;
+            color: white;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .quick-action-btn {
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .quick-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        }
+
+        .table thead th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 500;
+            border: none;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        .section-title {
+            color: var(--dark-color);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .progress {
+            height: 10px;
+            border-radius: 5px;
+        }
+
+        .card-footer {
+            background: transparent;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        @media (max-width: 768px) {
+            .stat-card {
+                margin-bottom: 1rem;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">Accounting Software</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>Financial Management System
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="manage_users.php">Manage Users</a>
+                        <a class="nav-link" href="manage_users.php">
+                            <i class="fas fa-users me-1"></i> Users
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="manage_transactions.php">Manage Transactions</a>
+                        <a class="nav-link" href="manage_transactions.php">
+                            <i class="fas fa-exchange-alt me-1"></i> Transactions
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="manage_categories.php">Manage Categories</a>
+                        <a class="nav-link" href="manage_categories.php">
+                            <i class="fas fa-tags me-1"></i> Categories
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="financial_reports.php">Financial Reports</a>
-                    </li>
-                    <!-- Added Manage Salaries and Process Salaries to Navigation -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_salaries.php">Manage Salaries</a>
+                        <a class="nav-link" href="financial_reports.php">
+                            <i class="fas fa-file-alt me-1"></i> Reports
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="process_salaries.php">Process Salaries</a>
+                        <a class="nav-link" href="add_income.php">
+                            <i class="fas fa-file-alt me-1"></i> Add Income
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="export_salary_report.php">export_salary_report</a>
+                        <a class="nav-link" href="manage_salaries.php">
+                            <i class="fas fa-money-bill-wave me-1"></i> Salaries
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="salary_report.php">salary_report.php</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="add_income.php">Add Income</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="admin_dashboard.php">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</a>
+                        <a class="nav-link" href="logout.php">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                            (<?php echo htmlspecialchars($_SESSION['username']); ?>)
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Dashboard Content -->
+    <!-- Main Content -->
     <div class="container mt-4">
-        <h2>Admin Dashboard</h2>
+        <!-- Welcome Section -->
+        <div class="row mb-4">
+            <div class="col">
+                <h2 class="section-title">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard Overview
+                </h2>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="dashboard-card stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-value"><?php echo number_format($user_count); ?></div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, var(--success-color), #2ecc71)">
+                    <div class="stat-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-value">$<?php echo number_format($total_income, 2); ?></div>
+                    <div class="stat-label">Total Income</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, var(--danger-color), #e74c3c)">
+                    <div class="stat-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="stat-value">$<?php echo number_format($total_expenses, 2); ?></div>
+                    <div class="stat-label">Total Expenses</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, var(--info-color), #3498db)">
+                    <div class="stat-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="stat-value">$<?php echo number_format($net_balance, 2); ?></div>
+                    <div class="stat-label">Net Balance</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col">
+                <h3 class="section-title">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h3>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="manage_salaries.php" class="quick-action-btn btn btn-primary">
+                        <i class="fas fa-money-check-alt me-2"></i>Manage Salaries
+                    </a>
+                    <a href="process_salaries.php" class="quick-action-btn btn btn-success">
+                        <i class="fas fa-tasks me-2"></i>Process Salaries
+                    </a>
+                    <a href="view_audit_logs.php" class="quick-action-btn btn btn-info">
+                        <i class="fas fa-history me-2"></i>View Audit Logs
+                    </a>
+                    <a href="financial_reports.php" class="quick-action-btn btn btn-warning">
+                        <i class="fas fa-chart-bar me-2"></i>Financial Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities and Income -->
         <div class="row">
-            <!-- Users Card -->
-            <div class="col-md-4">
-                <div class="card text-white bg-primary">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Users</h5>
-                        <p class="card-text" style="font-size: 2em;"><?php echo $user_count; ?></p>
-                        <a href="manage_users.php" class="btn btn-light">Manage Users</a>
-                    </div>
-                </div>
-            </div>
-            <!-- Transactions Card -->
-            <div class="col-md-4">
-                <div class="card text-white bg-success">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Transactions</h5>
-                        <p class="card-text" style="font-size: 2em;"><?php echo $total_transactions; ?></p>
-                        <a href="manage_transactions.php" class="btn btn-light">Manage Transactions</a>
-                    </div>
-                </div>
-            </div>
-            <!-- Categories Card -->
-            <div class="col-md-4">
-                <div class="card text-white bg-warning">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Categories</h5>
-                        <p class="card-text" style="font-size: 2em;"><?php echo $total_categories; ?></p>
-                        <a href="manage_categories.php" class="btn btn-light">Manage Categories</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Financial Overview -->
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card text-white bg-info">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Income</h5>
-                        <p class="card-text" style="font-size: 2em;">$<?php echo number_format($total_income, 2); ?></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card text-white bg-danger">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Expenses</h5>
-                        <p class="card-text" style="font-size: 2em;">$<?php echo number_format($total_expenses, 2); ?></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-12">
-                <div class="card text-white bg-dark">
-                    <div class="card-body">
-                        <h5 class="card-title">Net Balance</h5>
-                        <p class="card-text" style="font-size: 2em;">$<?php echo number_format($net_balance, 2); ?></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions: Manage Salaries and Process Salaries -->
-        <div class="mt-5">
-            <h3>Quick Actions</h3>
-            <div class="d-flex gap-3 flex-wrap">
-                <a href="manage_salaries.php" class="btn btn-primary btn-custom">Manage Salaries</a>
-                <a href="process_salaries.php" class="btn btn-success btn-custom">Process Salaries</a>
-                <a href="view_audit_logs.php" class="btn btn-secondary btn-custom">View Audit Logs</a>
-                <a href="financial_reports.php" class="btn btn-info btn-custom">Financial Reports</a>
-            </div>
-        </div>
-
-        <!-- Recent Audit Logs -->
-        <div class="mt-5">
-            <h3>Recent Activities</h3>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>ID</th>
-                            <th>User</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>Timestamp</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (count($recent_logs) > 0): ?>
-                            <?php foreach ($recent_logs as $log): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($log['id']); ?></td>
-                                    <td><?php echo htmlspecialchars($log['username'] ?? 'System'); ?></td>
-                                    <td><?php echo htmlspecialchars($log['action']); ?></td>
-                                    <td><?php echo htmlspecialchars($log['details']); ?></td>
-                                    <td><?php echo htmlspecialchars($log['timestamp']); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
+            <!-- Recent Activities -->
+            <div class="col-md-7 mb-4">
+                <h3 class="section-title">
+                    <i class="fas fa-clock me-2"></i>Recent Activities
+                </h3>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
-                                <td colspan="5" class="text-center">No recent activities found.</td>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>Time</th>
                             </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recent_logs as $log): ?>
+                            <tr>
+                                <td>
+                                    <i class="fas fa-user-circle me-2"></i>
+                                    <?php echo htmlspecialchars($log['username'] ?? 'System'); ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($log['action']); ?></td>
+                                <td><?php echo htmlspecialchars($log['details']); ?></td>
+                                <td><?php echo htmlspecialchars(date('M d, H:i', strtotime($log['timestamp']))); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <a href="view_audit_logs.php" class="btn btn-secondary">View All Audit Logs</a>
-        </div>
 
-        <!-- Recent Income Entries -->
-        <div class="mt-5">
-            <h3>Recent Income Entries</h3>
-            <?php if (!empty($recent_incomes)): ?>
-                <table class="table table-bordered table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Description</th>
-                            <th>Amount ($)</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($recent_incomes as $income): ?>
+            <!-- Recent Income -->
+            <div class="col-md-5 mb-4">
+                <h3 class="section-title">
+                    <i class="fas fa-money-bill-wave me-2"></i>Recent Income
+                </h3>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recent_incomes as $income): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($income['description']); ?></td>
-                                <td><?php echo number_format($income['amount'], 2); ?></td>
-                                <td><?php echo htmlspecialchars($income['date']); ?></td>
+                                <td>$<?php echo number_format($income['amount'], 2); ?></td>
+                                <td><?php echo
+
+
+htmlspecialchars(date('M d, Y', strtotime($income['date']))); ?></td>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p>No recent income entries found.</p>
-            <?php endif; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+
+        <!-- Additional Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="dashboard-card">
+                    <div class="card-body">
+                        <h4 class="card-title">
+                            <i class="fas fa-chart-pie me-2"></i>Transaction Statistics
+                        </h4>
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Transactions</span>
+                                <span class="badge bg-primary"><?php echo number_format($total_transactions); ?></span>
+                            </div>
+                            <div class="progress mb-4">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: 75%"></div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Categories</span>
+                                <span class="badge bg-success"><?php echo number_format($total_categories); ?></span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 60%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="dashboard-card">
+                    <div class="card-body">
+                        <h4 class="card-title">
+                            <i class="fas fa-dollar-sign me-2"></i>Financial Overview
+                        </h4>
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Income to Expense Ratio</span>
+                                <span class="badge bg-info">
+                                    <?php 
+                                    $ratio = $total_expenses > 0 ? ($total_income / $total_expenses) : 0;
+                                    echo number_format($ratio, 2);
+                                    ?>
+                                </span>
+                            </div>
+                            <div class="progress mb-4">
+                                <div class="progress-bar bg-info" role="progressbar" 
+                                     style="width: <?php echo min(100, $ratio * 100); ?>%"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Budget Utilization</span>
+                                <span class="badge bg-warning">
+                                    <?php 
+                                    $utilization = $total_income > 0 ? ($total_expenses / $total_income * 100) : 0;
+                                    echo number_format($utilization, 1) . '%';
+                                    ?>
+                                </span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-warning" role="progressbar" 
+                                     style="width: <?php echo min(100, $utilization); ?>%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-5 mb-4 text-center text-muted">
+            <div class="container">
+                <p class="mb-0">© <?php echo date('Y'); ?> Financial Management System. All rights reserved.</p>
+                <small>Last login: <?php echo date('M d, Y H:i:s'); ?></small>
+            </div>
+        </footer>
     </div>
 
-    <!-- Include Bootstrap JS (Optional) -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Add smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add loading animation
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.dashboard-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 100);
+            });
+        });
+
+        // Add tooltip initialization
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    </script>
 </body>
 </html>
