@@ -153,124 +153,203 @@ if ($result) {
 <html>
 <head>
     <title>Manage Categories</title>
-    <!-- Include Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Add Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Include Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .container { margin-top: 30px; }
-        .card-header { background-color: #6c757d; color: white; }
-        .delete-button { color: #dc3545; }
-        .delete-button:hover { color: #c82333; text-decoration: none; }
-        .edit-button { color: #0d6efd; }
-        .edit-button:hover { color: #0a58ca; text-decoration: none; }
-        .form-control:focus, .form-select:focus {
-            box-shadow: none;
-            border-color: #6c757d;
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
         }
-        .table th a {
-            color: inherit;
-            text-decoration: none;
+
+        body {
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .table th a:hover {
-            text-decoration: underline;
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            margin: 0 0.2rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            transform: translateY(-1px);
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+            border: none;
+        }
+
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 500;
+            border: none;
+            padding: 1rem;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        .btn-action {
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .action-buttons .btn {
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .action-buttons .btn-danger {
+            background: var(--danger-color);
+            border: none;
+        }
+
+        .action-buttons .btn-primary {
+            padding: 0.5rem;
         }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-calculator me-2"></i>Financial Management System
+                <i class="fas fa-tags me-2"></i>Manage Categories
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
-                    data-bs-target="#navbarNav" aria-controls="navbarNav" 
-                    aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="admin_dashboard.php">
-                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="manage_categories.php">
-                            <i class="fas fa-tags me-1"></i>Manage Categories
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="logout.php">
-                            <i class="fas fa-sign-out-alt me-1"></i>Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)
-                        </a>
-                    </li>
-                </ul>
+            <div class="ms-auto">
+                <a href="admin_dashboard.php" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                </a>
             </div>
         </div>
     </nav>
 
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Display Success or Error Messages -->
+    <div class="container mt-4">
         <?php if (!empty($success)): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <?php echo htmlspecialchars($success); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
+
         <?php if (!empty($error)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <?php echo htmlspecialchars($error); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
 
         <!-- Add Category Card -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Add New Category</h5>
+                <i class="fas fa-plus me-2"></i>Add New Category
             </div>
             <div class="card-body">
                 <form method="POST" action="manage_categories.php">
-                    <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-
                     <div class="mb-3">
-                        <label for="name" class="form-label">Category Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter category name" required>
+                        <label for="name" class="form-label">Category Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
                     </div>
-
-                    <button type="submit" name="add_category" class="btn btn-primary">Add Category</button>
+                    <button type="submit" name="add_category" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add Category
+                    </button>
                 </form>
             </div>
         </div>
 
-        <!-- Export Categories Button -->
-        <div class="mb-3">
-            <form method="POST" action="manage_categories.php" class="d-inline">
-                <!-- CSRF Token -->
+        <!-- Categories List Card -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>Categories List</span>
+                <form method="POST" class="d-inline">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                <button type="submit" name="export_csv" class="btn btn-success">
-                    <i class="bi bi-download"></i> Export CSV
+                    <button type="submit" name="export_csv" class="btn btn-light btn-sm">
+                        <i class="fas fa-download me-1"></i>Export CSV
                 </button>
             </form>
-        </div>
-
-        <!-- Categories Table Card -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Categories List</h5>
             </div>
             <div class="card-body p-0">
                 <?php if (!empty($categories)): ?>
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
+                        <table class="table table-hover">
+                            <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Name</th>
@@ -282,36 +361,22 @@ if ($result) {
                                     <tr>
                                         <td><?php echo htmlspecialchars($category['id']); ?></td>
                                         <td><?php echo htmlspecialchars($category['name']); ?></td>
-                                        <td>
-                                            <a href="edit_category.php?id=<?php echo $category['id']; ?>" class="edit-button me-2" title="Edit Category">
-                                                <i class="bi bi-pencil-fill"></i>
+                                        <td class="action-buttons">
+                                            <a href="edit_category.php?id=<?php echo $category['id']; ?>" 
+                                               class="btn btn-primary btn-action me-2">
+                                                <i class="fas fa-edit"></i>
                                             </a>
-                                            <button type="button" class="delete-button btn btn-link text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<?php echo $category['id']; ?>" title="Delete Category">
-                                                <i class="bi bi-trash-fill"></i>
-                                            </button>
-
-                                            <!-- Delete Confirmation Modal -->
-                                            <div class="modal fade" id="deleteModal<?php echo $category['id']; ?>" tabindex="-1" aria-labelledby="deleteModalLabel<?php echo $category['id']; ?>" aria-hidden="true">
-                                                <div class="modal-dialog">
-                                                    <div class="modal-content">
-                                                        <form method="POST" action="manage_categories.php">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="deleteModalLabel<?php echo $category['id']; ?>">Confirm Deletion</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                Are you sure you want to delete the category "<strong><?php echo htmlspecialchars($category['name']); ?></strong>"?
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                                                                <input type="hidden" name="category_id" value="<?php echo $category['id']; ?>">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                <button type="submit" name="delete_category" class="btn btn-danger">Delete</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <form method="POST" class="d-inline">
+                                                <input type="hidden" name="csrf_token" 
+                                                       value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                                                <input type="hidden" name="category_id" 
+                                                       value="<?php echo $category['id']; ?>">
+                                                <button type="submit" name="delete_category" 
+                                                        class="btn btn-danger btn-action"
+                                                        onclick="return confirm('Are you sure you want to delete this category?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -325,16 +390,8 @@ if ($result) {
                 <?php endif; ?>
             </div>
         </div>
-
-        <!-- Back Button -->
-        <div class="back-button mt-4 text-center">
-            <a href="admin_dashboard.php" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Dashboard
-            </a>
-        </div>
     </div>
 
-    <!-- Include Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

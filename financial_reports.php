@@ -129,56 +129,75 @@ if ($_SESSION['role'] == 'admin') {
 <head>
     <title>Financial Reports</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --primary: #2C3E50;
-            --secondary: #34495E;
-            --success: #27AE60;
-            --danger: #C0392B;
-            --gray-100: #F7FAFC;
-            --gray-200: #EDF2F7;
-            --gray-300: #E2E8F0;
-            --gray-400: #CBD5E0;
-            --gray-500: #A0AEC0;
-            --gray-600: #718096;
-            --gray-700: #4A5568;
-            --gray-800: #2D3748;
-            --gray-900: #1A202C;
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
         }
 
         body {
-            background-color: var(--gray-100);
-            font-family: 'Segoe UI', sans-serif;
-            color: var(--gray-800);
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* Header */
-        .page-header {
-            background: var(--primary);
-            color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
         }
 
-        /* Report Cards */
-        .report-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--gray-200);
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            margin: 0 0.2rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            transform: translateY(-1px);
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            margin-right: 8px;
         }
 
         .stats-card {
-            background: linear-gradient(to right, var(--gray-800), var(--gray-700));
-            color: white;
-            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 15px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
         }
 
         .stats-value {
@@ -187,89 +206,103 @@ if ($_SESSION['role'] == 'admin') {
             margin: 0.5rem 0;
         }
 
-        .stats-label {
-            color: var(--gray-400);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Filter Section */
         .filter-section {
             background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--gray-200);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .form-control, .form-select {
-            border-radius: 8px;
-            border: 2px solid var(--gray-300);
-            padding: 0.75rem 1rem;
-            background-color: white;
+        .report-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .form-control:focus, .form-select:focus {
-            border-color: var(--gray-600);
-            box-shadow: 0 0 0 3px rgba(113, 128, 150, 0.2);
-        }
-
-        /* Buttons */
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.8rem 1.5rem;
             border-radius: 8px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         }
 
         .btn-primary {
-            background: var(--gray-800);
+            background: var(--primary-color);
             border: none;
         }
 
         .btn-primary:hover {
-            background: var(--gray-900);
-            transform: translateY(-1px);
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
         .btn-export {
-            background: var(--gray-600);
+            background: var(--info-color);
             color: white;
             border: none;
         }
 
         .btn-export:hover {
-            background: var(--gray-700);
-            transform: translateY(-1px);
+            background: #3d7ec9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        /* Income/Expense Indicators */
-        .income-text {
-            color: var(--success);
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .section-title {
+            color: var(--dark-color);
             font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color);
         }
 
-        .expense-text {
-            color: var(--danger);
-            font-weight: 600;
+        .table {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .balance-text {
-            color: #3498db ;
-            font-weight: 600;
+        .table thead th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 500;
+            border: none;
+            padding: 1rem;
         }
 
-        /* Admin Section */
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
         .admin-section {
-            background: var(--gray-100);
-            border-radius: 12px;
+            background: white;
+            border-radius: 15px;
             padding: 2rem;
             margin-top: 2rem;
-            border: 1px solid var(--gray-300);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        /* Responsive Design */
         @media (max-width: 768px) {
             .stats-card {
                 margin-bottom: 1rem;
@@ -283,19 +316,22 @@ if ($_SESSION['role'] == 'admin') {
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="page-header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">Financial Reports</h1>
-                <a href="user_dashboard.php" class="btn btn-outline-light btn-sm">
-                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>Financial Reports
+            </a>
+            <div class="ms-auto">
+                <a href="<?php echo $_SESSION['role'] == 'admin' ? 'admin_dashboard.php' : 'user_dashboard.php'; ?>" 
+                   class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
                 </a>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="container">
+    <div class="container mt-4">
         <!-- Display Success or Error Messages -->
         <?php if (!empty($error)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">

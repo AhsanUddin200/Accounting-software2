@@ -106,6 +106,7 @@
     <head>
         <title>User Dashboard</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
                :root {
             --primary-color: #4361ee;
@@ -124,148 +125,168 @@
             }
             
             .navbar {
-                background: var(--primary-color) !important;
+                background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                padding: 0.5rem 0;
+                min-height: 60px;
             }
             
-            .card {
-                border: none;
-                border-radius: 15px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                transition: transform 0.2s;
-            }
-            
-            .card:hover {
-                transform: translateY(-5px);
-            }
-            
-            .stats-card {
-                padding: 1.5rem;
-                margin: 15px 0;
-            }
-            
-            .stats-card .card-title {
-                font-size: 1.1rem;
+            .navbar-brand {
                 font-weight: 600;
-                margin-bottom: 1rem;
+                color: white !important;
+                font-size: 1.1rem;
             }
             
-            .stats-card .card-text {
-                font-size: 2.2em;
-                font-weight: bold;
-            }
-            
-            .table {
-                background: white;
-                border-radius: 15px;
-                overflow: hidden;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            }
-            
-            .table thead {
-                background: var(--primary-color);
-                color: white;
-            }
-            
-            .btn {
-                border-radius: 8px;
-                padding: 8px 20px;
+            .nav-link {
+                color: rgba(255,255,255,0.9) !important;
+                transition: all 0.3s ease;
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                margin: 0 0.1rem;
                 font-weight: 500;
+                font-size: 0.9rem;
+            }
+            
+            .nav-link:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: white !important;
+                transform: translateY(-1px);
+            }
+            
+            .nav-link.active {
+                background: rgba(255, 255, 255, 0.2);
+                color: white !important;
+            }
+            
+            .nav-link i {
+                width: 16px;
+                text-align: center;
+                margin-right: 6px;
+                font-size: 0.9rem;
             }
             
             .avatar-img {
-                width: 45px;
-                height: 45px;
-                object-fit: cover;
+                width: 32px;
+                height: 32px;
                 border-radius: 50%;
-                border: 2px solid white;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                padding: 1px;
+            }
+            
+            .user-name {
+                color: white !important;
+                font-weight: 500;
+                font-size: 0.9rem;
             }
             
             .dropdown-menu {
-                border-radius: 10px;
+                margin-top: 0.5rem;
+                border: none;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                border-radius: 6px;
+                font-size: 0.9rem;
+            }
+            
+            .dropdown-item {
+                padding: 0.5rem 1rem;
+                transition: all 0.3s ease;
+            }
+            
+            .dropdown-item:hover {
+                background-color: rgba(67, 97, 238, 0.1);
             }
             
             .notification-badge {
                 position: absolute;
-                top: -5px;
-                right: -5px;
+                top: -2px;
+                right: -2px;
+                padding: 0.2rem 0.5rem;
+                font-size: 0.7rem;
+                border-radius: 50%;
+                background-color: var(--danger-color);
             }
         </style>
     </head>
     <body>
         <!-- Navigation Bar -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">Financial Management System</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-chart-line me-1"></i>Financial Management
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto align-items-center">
+                    <ul class="navbar-nav ms-auto align-items-center gap-1">
                         <li class="nav-item">
-                            <a class="nav-link" href="view_transactions.php">View Transactions</a>
+                            <a class="nav-link" href="view_transactions.php">
+                                <i class="fas fa-list"></i>Transactions
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="add_transaction.php">Add Transaction</a>
+                            <a class="nav-link" href="add_transaction.php">
+                                <i class="fas fa-plus"></i>Add
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="financial_reports.php">Financial Reports</a>
+                            <a class="nav-link" href="financial_reports.php">
+                                <i class="fas fa-chart-bar"></i>Reports
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="edit_profile.php">Edit Profile</a>
+                            <a class="nav-link" href="edit_profile.php">
+                                <i class="fas fa-user-edit"></i>Profile
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="user_dashboard.php">Dashboard</a>
+                            <a class="nav-link active" href="user_dashboard.php">
+                                <i class="fas fa-tachometer-alt"></i>Dashboard
+                            </a>
                         </li>
-                        <!-- <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" 
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-bell"></i>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link position-relative" href="#" id="notificationsDropdown" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
                                 <?php if (count($notifications) > 0): ?>
-                                    <span class="badge bg-danger"><?php echo count($notifications); ?></span>
+                                    <span class="notification-badge"><?php echo count($notifications); ?></span>
                                 <?php endif; ?>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
                                 <?php if (count($notifications) > 0): ?>
                                     <?php foreach ($notifications as $notif): ?>
-                                        <li><a class="dropdown-item" href="#"><?php echo htmlspecialchars($notif['message']); ?></a></li>
+                                        <li>
+                                            <a class="dropdown-item" href="#">
+                                                <small class="text-muted"><?php echo date('M d, H:i', strtotime($notif['timestamp'])); ?></small>
+                                                <div><?php echo htmlspecialchars($notif['message']); ?></div>
+                                            </a>
+                                        </li>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <li><a class="dropdown-item" href="#">No new notifications.</a></li>
+                                    <li><a class="dropdown-item" href="#">No new notifications</a></li>
                                 <?php endif; ?>
                             </ul>
-                        </li> -->
-
+                        </li>
                         <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" 
-                           data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-bell"></i>
-                            <?php if (count($notifications) > 0): ?>
-                                <span class="badge bg-danger"><?php echo count($notifications); ?></span>
-                            <?php endif; ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
-                            <?php if (count($notifications) > 0): ?>
-                                <?php foreach ($notifications as $notif): ?>
-                                    <li>
-                                        <a class="dropdown-item" href="#">
-                                            <small><?php echo htmlspecialchars($notif['timestamp']); ?></small>
-                                            <br>
-                                            <?php echo htmlspecialchars($notif['message']); ?>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <li><a class="dropdown-item" href="#">No new notifications.</a></li>
-                            <?php endif; ?>
-                        </ul>
-                    </li>
-                        <li class="nav-item d-flex align-items-center">
-                            <img src="<?php echo htmlspecialchars($avatar_path); ?>" alt="Avatar" class="avatar-img me-2">
-                            <span class="nav-link">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</span>
-                           
+                            <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="<?php echo htmlspecialchars($avatar_path); ?>" alt="Avatar" class="avatar-img me-2">
+                                <span class="user-name"><?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                                <i class="fas fa-chevron-down ms-2"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="edit_profile.php">
+                                        <i class="fas fa-user-edit me-2"></i>Edit Profile
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="logout.php">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </div>

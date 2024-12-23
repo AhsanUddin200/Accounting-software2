@@ -5,6 +5,11 @@ require_once __DIR__ . '/session.php';        // Include session management
 require_once __DIR__ . '/db.php';            // Include database connection
 require_once __DIR__ . '/functions.php';     // Include helper functions
 
+// Enable error reporting for debugging (remove in production)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Ensure the user is an admin
 if ($_SESSION['role'] != 'admin') {
     header("Location: user_dashboard.php");
@@ -13,6 +18,11 @@ if ($_SESSION['role'] != 'admin') {
 
 $admin_id = $_SESSION['user_id']; // Admin's User ID
 
+// Generate CSRF token if not set
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $success = '';
     $error = '';
@@ -20,90 +30,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $processed = 0;
     $total_salary = 0;
 
-    // Start Transaction
-    $conn->begin_transaction();
+    // CSRF Protection
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error = "Invalid CSRF token.";
+    } else {
+        // Start Transaction
+        $conn->begin_transaction();
 
-    try {
-        // Fetch all users with fixed salaries
-        $result = $conn->query("SELECT id, username, fixed_salary FROM users WHERE fixed_salary > 0");
-        if (!$result) {
-            throw new Exception("Failed to fetch users with salaries: " . $conn->error);
-        }
-
-        // Get 'Salary' category ID
-        $category_stmt = $conn->prepare("SELECT id FROM categories WHERE name = 'Salary' LIMIT 1");
-        if (!$category_stmt) {
-            throw new Exception("Failed to fetch 'Salary' category: " . $conn->error);
-        }
-        $category_stmt->execute();
-        $category_stmt->bind_result($salary_category_id);
-        if (!$category_stmt->fetch()) {
-            throw new Exception("Salary category not found. Please create it in the Categories section.");
-        }
-        $category_stmt->close();
-
-        $salary_date = date('Y-m-d'); // Current date for salary processing
-
-        while ($user = $result->fetch_assoc()) {
-            $user_id = $user['id'];
-            $username = $user['username'];
-            $salary_amount = $user['fixed_salary'];
-            $total_salary += $salary_amount;
-
-            // Add salary to user's income (positive amount)
-            $user_salary_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
-                                                VALUES (?, ?, 'income', ?, ?, 'Monthly Salary')");
-            if (!$user_salary_stmt) {
-                throw new Exception("Failed to prepare user salary transaction: " . $conn->error);
+        try {
+            // Fetch all users with current_month_salary set
+            $current_month = date('Y-m'); // e.g., 2023-10
+            $stmt = $conn->prepare("SELECT id, username, current_month_salary FROM users WHERE current_month_salary > 0");
+            if (!$stmt) {
+                throw new Exception("Failed to prepare statement: " . $conn->error);
             }
-            $user_salary_stmt->bind_param("idis", $user_id, $salary_amount, $salary_category_id, $salary_date);
-            if (!$user_salary_stmt->execute()) {
-                throw new Exception("Failed to execute user salary transaction: " . $user_salary_stmt->error);
-            }
-            $user_salary_stmt->close();
+            $stmt->execute();
+            $result = $stmt->get_result();
 
-            // Add expense for the admin (positive amount)
-            $admin_expense_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
-                                                  VALUES (?, ?, 'expense', ?, ?, 'Monthly Salary Payment')");
-            if (!$admin_expense_stmt) {
-                throw new Exception("Failed to prepare admin expense transaction: " . $conn->error);
+            // Get 'Salary' category ID
+            $category_stmt = $conn->prepare("SELECT id FROM categories WHERE name = 'Salary' LIMIT 1");
+            if (!$category_stmt) {
+                throw new Exception("Failed to fetch 'Salary' category: " . $conn->error);
             }
-            $admin_expense_stmt->bind_param("idis", $admin_id, $salary_amount, $salary_category_id, $salary_date);
-            if (!$admin_expense_stmt->execute()) {
-                throw new Exception("Failed to execute admin expense transaction: " . $admin_expense_stmt->error);
+            $category_stmt->execute();
+            $category_stmt->bind_result($salary_category_id);
+            if (!$category_stmt->fetch()) {
+                throw new Exception("Salary category not found. Please create it in the Categories section.");
             }
-            $admin_expense_stmt->close();
+            $category_stmt->close();
 
-            // Send notification to the user
-            $notif_message = "Your monthly salary of $$salary_amount has been credited on $salary_date.";
-            $notif_stmt = $conn->prepare("INSERT INTO notifications (user_id, message, is_read, timestamp) VALUES (?, ?, 0, NOW())");
-            if ($notif_stmt) {
-                $notif_stmt->bind_param("is", $user_id, $notif_message);
-                if (!$notif_stmt->execute()) {
+            while ($user = $result->fetch_assoc()) {
+                $user_id = $user['id'];
+                $username = $user['username'];
+                $salary_amount = $user['current_month_salary'];
+                $total_salary += $salary_amount;
+
+                // Assign date to a variable
+                $salary_date = $current_month . "-01";
+
+                // Insert 'income' transaction for the user
+                $user_salary_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
+                                                    VALUES (?, ?, 'income', ?, ?, 'Monthly Salary')");
+                if (!$user_salary_stmt) {
+                    throw new Exception("Failed to prepare user salary transaction for User ID $user_id: " . $conn->error);
+                }
+                $user_salary_stmt->bind_param("idis", $user_id, $salary_amount, $salary_category_id, $salary_date);
+                if (!$user_salary_stmt->execute()) {
+                    throw new Exception("Failed to execute user salary transaction for User ID $user_id: " . $user_salary_stmt->error);
+                }
+                $user_salary_stmt->close();
+
+                // Insert 'expense' transaction for the admin
+                $admin_expense_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
+                                                      VALUES (?, ?, 'expense', ?, ?, 'Monthly Salary Payment to $username')");
+                if (!$admin_expense_stmt) {
+                    throw new Exception("Failed to prepare admin expense transaction for User ID $user_id: " . $conn->error);
+                }
+                $admin_expense_stmt->bind_param("idis", $admin_id, $salary_amount, $salary_category_id, $salary_date);
+                if (!$admin_expense_stmt->execute()) {
+                    throw new Exception("Failed to execute admin expense transaction for User ID $user_id: " . $admin_expense_stmt->error);
+                }
+                $admin_expense_stmt->close();
+
+                // Send notification to the user
+                $notif_message = "Your monthly salary of $" . number_format($salary_amount, 2) . " has been credited on " . date('F Y', strtotime($salary_date)) . ".";
+                $notif_stmt = $conn->prepare("INSERT INTO notifications (user_id, message, is_read, timestamp) VALUES (?, ?, 0, NOW())");
+                if ($notif_stmt) {
+                    $notif_stmt->bind_param("is", $user_id, $notif_message);
+                    if (!$notif_stmt->execute()) {
+                        // Log notification failure but do not throw exception
+                        $failed_users[] = $username;
+                    }
+                    $notif_stmt->close();
+                } else {
                     $failed_users[] = $username;
                 }
-                $notif_stmt->close();
-            } else {
-                $failed_users[] = $username;
+
+                // Log the action
+                log_action($conn, $admin_id, 'Processed Salary', "Salary of $$salary_amount processed for user $username.");
+
+                $processed++;
             }
 
-            log_action($conn, $admin_id, 'Processed Salary', "Salary of $$salary_amount processed for user $username.");
+            // Commit transaction
+            $conn->commit();
 
-            $processed++;
+            // Success message
+            $success_message = "Salaries processed successfully for $processed users.";
+            if (!empty($failed_users)) {
+                $success_message .= " However, notifications failed for: " . implode(', ', $failed_users) . ".";
+            }
+            $success = $success_message;
+        } catch (Exception $e) {
+            $conn->rollback(); // Rollback on error
+            $error = "Failed to process salaries: " . $e->getMessage();
         }
-
-        // Commit transaction
-        $conn->commit();
-
-        // Success message
-        $success_message = "Salaries processed successfully for $processed users.";
-        if (!empty($failed_users)) {
-            $success_message .= " However, notifications failed for: " . implode(', ', $failed_users) . ".";
-        }
-        $success = $success_message;
-    } catch (Exception $e) {
-        $conn->rollback(); // Rollback on error
-        $error = "Failed to process salaries: " . $e->getMessage();
     }
 }
 ?>
@@ -114,120 +135,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Navbar Styling */
-        .navbar {
-            background-color: #f8f9fa !important;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 0.8rem 0;
-        }
-        .navbar-brand {
-            color: #2c3e50 !important;
-            font-weight: 600;
-            font-size: 1.3rem;
-        }
-        .nav-link {
-            color: #4a5568 !important;
-            padding: 0.5rem 1rem !important;
-            margin: 0 0.2rem;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-        .nav-link:hover {
-            background-color: #e2e8f0;
-            color: #2d3748 !important;
-        }
-        .nav-link.active {
-            background-color: #e2e8f0 !important;
-            color: #1a202c !important;
-            font-weight: 500;
+        /* Your existing styles */
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
-        /* Content Styling */
-        body {
-            background-color: #f5f7fa;
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: linear-gradient(to right, #1e40af, #3b82f6);
         }
+
+        .navbar .navbar-brand {
+            font-weight: bold;
+        }
+
         .main-content {
             padding: 2rem;
         }
+
         .salary-card {
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
             padding: 2rem;
-            margin-bottom: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+                        0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .salary-header {
+
+        .salary-header h2 {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #f0f2f5;
         }
-        .salary-header h2 {
-            color: #2c3e50;
-            font-weight: 600;
-            margin: 0;
-        }
-        .process-form {
-            background: #f8fafc;
-            padding: 2rem;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-        }
+
         .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
+
         .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
+            flex: 1;
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
         }
+
         .stat-card h3 {
-            font-size: 0.9rem;
-            color: #64748b;
             margin-bottom: 0.5rem;
+            font-size: 1.2rem;
         }
+
         .stat-card .value {
             font-size: 1.5rem;
-            font-weight: 600;
-            color: #2c3e50;
+            font-weight: bold;
         }
+
+        .process-form {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
         .btn-process {
-            background: #3498db;
+            background-color: #1e40af;
+            color: white;
+            padding: 0.75rem 1.5rem;
             border: none;
-            padding: 0.8rem 2rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: background-color 0.3s;
         }
+
         .btn-process:hover {
-            background: #2980b9;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #3b82f6;
         }
+
         .alert {
-            border-radius: 10px;
-            border: none;
-            padding: 1rem 1.5rem;
-        }
-        .alert-success {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-        .alert-danger {
-            background-color: #fee2e2;
-            color: #991b1b;
+            margin-top: 1rem;
         }
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg">
+    <!-- Navigation Bar (Same as before) -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-calculator me-2"></i>Financial Management System
@@ -235,8 +225,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link" href="admin_dashboard.php">
                             <i class="fas fa-dashboard me-1"></i>Dashboard
@@ -244,7 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="manage_salaries.php">
-                            <i class="fas fa-money-bill me-1"></i>Manage Salaries
+                            <i class="fas fa-money-bill-wave me-1"></i>Manage Salaries
                         </a>
                     </li>
                     <li class="nav-item">
@@ -302,7 +292,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="process-form">
                     <form method="POST" action="process_salaries.php">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                         <button type="submit" class="btn btn-primary btn-process">
                             <i class="fas fa-sync-alt me-2"></i>Process Salaries for All Users
                         </button>
@@ -312,6 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

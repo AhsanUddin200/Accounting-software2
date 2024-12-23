@@ -44,223 +44,192 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Income | Accounting Software</title>
+    <title>Add Income</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
         }
-        
+
         body {
-            background-color: #f8fafc;
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
         }
-        
+
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            margin: 0 0.2rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            transform: translateY(-1px);
+        }
+
         .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
             border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
         }
-        
-        .card:hover {
-            transform: translateY(-5px);
+
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
         }
-        
+
+        .form-control {
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
         .form-control:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
         }
-        
+
+        .input-group-text {
+            background-color: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-right: none;
+        }
+
         .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            padding: 0.75rem 1.5rem;
-            font-weight: 500;
+            background: var(--primary-color);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }
-        
+
         .btn-primary:hover {
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-        
-        .nav-link {
-            padding: 0.75rem 1rem;
-            font-weight: 500;
-        }
-        
-        .nav-link.active {
-            color: var(--primary-color) !important;
-            background-color: rgba(37, 99, 235, 0.1);
-            border-radius: 0.375rem;
-        }
-        
+
         .form-label {
             font-weight: 500;
-            color: #4b5563;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
         }
-        
+
         .alert {
+            border-radius: 8px;
             border: none;
-            border-radius: 0.5rem;
+        }
+
+        .alert-success {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+        }
+
+        .alert-danger {
+            background-color: rgba(192, 57, 43, 0.1);
+            color: var(--danger-color);
         }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-calculator me-2"></i>
-                Financial Management System
-
+                <i class="fas fa-plus-circle me-2"></i>Add Income
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <?php if ($_SESSION['role'] == 'admin'): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_dashboard.php">
-                                <i class="fas fa-tachometer-alt me-1"></i> Admin Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="view_audit_logs.php">
-                                <i class="fas fa-history me-1"></i> Audit Logs
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="add_income.php">
-                                <i class="fas fa-plus-circle me-1"></i> Add Income
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="dashboard.php">
-                            <i class="fas fa-chart-bar me-1"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="logout.php">
-                            <i class="fas fa-sign-out-alt me-1"></i> 
-                            Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)
-                        </a>
-                    </li>
-                </ul>
+            <div class="ms-auto">
+                <a href="admin_dashboard.php" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                </a>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-header bg-white py-3">
-                        <h4 class="card-title mb-0">
-                            <i class="fas fa-plus-circle text-primary me-2"></i>
-                            Add New Income
-                        </h4>
-                    </div>
-                    <div class="card-body p-4">
-                        <?php if (!empty($error)): ?>
-                            <div class="alert alert-danger d-flex align-items-center" role="alert">
-                                <i class="fas fa-exclamation-circle me-2"></i>
-                                <?php echo htmlspecialchars($error); ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <?php if (!empty($success)): ?>
-                            <div class="alert alert-success d-flex align-items-center" role="alert">
-                                <i class="fas fa-check-circle me-2"></i>
-                                <?php echo htmlspecialchars($success); ?>
-                            </div>
-                        <?php endif; ?>
+    <div class="container mt-4">
+        <?php if (!empty($success)): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <?php echo htmlspecialchars($success); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
 
-                        <form method="POST" action="add_income.php" class="needs-validation" novalidate>
-                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                            
-                            <div class="mb-4">
-                                <label for="description" class="form-label">
-                                    <i class="fas fa-file-alt text-primary me-2"></i>Description
-                                </label>
-                                <input type="text" class="form-control form-control-lg" id="description" 
-                                    name="description" required 
-                                    value="<?php echo htmlspecialchars($_POST['description'] ?? ''); ?>"
-                                    placeholder="Enter income description">
-                                <div class="invalid-feedback">
-                                    Please provide a description.
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label for="amount" class="form-label">
-                                    <i class="fas fa-dollar-sign text-primary me-2"></i>Amount
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" class="form-control form-control-lg" 
-                                        id="amount" name="amount" required 
-                                        value="<?php echo htmlspecialchars($_POST['amount'] ?? ''); ?>"
-                                        placeholder="0.00">
-                                </div>
-                                <div class="invalid-feedback">
-                                    Please enter a valid amount.
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label for="date" class="form-label">
-                                    <i class="fas fa-calendar text-primary me-2"></i>Date
-                                </label>
-                                <input type="date" class="form-control form-control-lg" id="date" 
-                                    name="date" required 
-                                    value="<?php echo htmlspecialchars($_POST['date'] ?? date('Y-m-d')); ?>">
-                                <div class="invalid-feedback">
-                                    Please select a date.
-                                </div>
-                            </div>
-                            
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    <i class="fas fa-save me-2"></i>Add Income
-                                </button>
-                            </div>
-                        </form>
+        <?php if (!empty($error)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <?php echo htmlspecialchars($error); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle me-2"></i>Add New Income
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="add_income.php">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="description" name="description" 
+                               required value="<?php echo htmlspecialchars($_POST['description'] ?? ''); ?>">
                     </div>
-                </div>
+
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" class="form-control" id="amount" name="amount" 
+                                   required value="<?php echo htmlspecialchars($_POST['amount'] ?? ''); ?>">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" 
+                               required value="<?php echo htmlspecialchars($_POST['date'] ?? date('Y-m-d')); ?>">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save me-2"></i>Add Income
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Form Validation Script -->
-    <script>
-        (() => {
-            'use strict'
-            const forms = document.querySelectorAll('.needs-validation')
-            Array.from(forms).forEach(form => {
-                form.addEventListener('submit', event => {
-                    if (!form.checkValidity()) {
-                        event.preventDefault()
-                        event.stopPropagation()
-                    }
-                    form.classList.add('was-validated')
-                }, false)
-            })
-        })()
-    </script>
 </body>
 </html>

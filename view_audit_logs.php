@@ -56,113 +56,173 @@ $stmt->close();
 <html>
 <head>
     <title>View Audit Logs</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Add Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+
+        body {
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            margin: 0 0.2rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            transform: translateY(-1px);
+        }
+
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white !important;
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            margin-right: 8px;
+        }
+
         .table-responsive {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             max-height: 600px;
         }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 500;
+            border: none;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(67, 97, 238, 0.03);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
         .pagination {
             justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .page-link {
+            padding: 0.75rem 1rem;
+            color: var(--primary-color);
+            background-color: white;
+            border: 1px solid #dee2e6;
+            margin: 0 0.25rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .page-link:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .section-title {
+            color: var(--dark-color);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .navbar-nav {
+                padding: 1rem 0;
+            }
+            
+            .nav-link {
+                padding: 0.5rem 1rem;
+            }
+            
+            .table-responsive {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-calculator me-2"></i>Financial Management System
+                <i class="fas fa-history me-2"></i>Audit Logs
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="admin_dashboard.php">
-                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_users.php">
-                            <i class="fas fa-users me-1"></i>Manage Users
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_transactions.php">
-                            <i class="fas fa-exchange-alt me-1"></i>Transactions
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_categories.php">
-                            <i class="fas fa-tags me-1"></i>Categories
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_salaries.php">
-                            <i class="fas fa-money-check-alt me-1"></i>Manage Salaries
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="process_salaries.php">
-                            <i class="fas fa-money-bill-wave me-1"></i>Process Salaries
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="financial_reports.php">
-                            <i class="fas fa-chart-bar me-1"></i>Financial Reports
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="view_audit_logs.php">
-                            <i class="fas fa-history me-1"></i>Audit Logs
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="logout.php">
-                            <i class="fas fa-sign-out-alt me-1"></i>Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)
-                        </a>
-                    </li>
-                </ul>
+            <div class="ms-auto">
+                <a href="admin_dashboard.php" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                </a>
             </div>
         </div>
     </nav>
 
-    <!-- Audit Logs Content -->
     <div class="container mt-4">
-        <h2>Audit Logs</h2>
-
-        <!-- Search and Filter (Optional) -->
-        <!-- 
-        <form method="GET" action="view_audit_logs.php" class="row g-3 mb-4">
-            <div class="col-md-4">
-                <input type="text" name="username" class="form-control" placeholder="Username" value="<?php echo htmlspecialchars($_GET['username'] ?? ''); ?>">
-            </div>
-            <div class="col-md-3">
-                <select name="action" class="form-select">
-                    <option value="">All Actions</option>
-                    <option value="Logged In" <?php echo (isset($_GET['action']) && $_GET['action'] == 'Logged In') ? 'selected' : ''; ?>>Logged In</option>
-                    <option value="Updated Salary" <?php echo (isset($_GET['action']) && $_GET['action'] == 'Updated Salary') ? 'selected' : ''; ?>>Updated Salary</option>
-                    <!-- Add more actions as needed 
-                </select>
-            </div>
-            <div class="col-md-3">
-                <input type="date" name="start_date" class="form-control" placeholder="Start Date" value="<?php echo htmlspecialchars($_GET['start_date'] ?? ''); ?>">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">Filter</button>
-            </div>
-        </form>
-        -->
+        <h2 class="section-title">
+            <i class="fas fa-history me-2"></i>System Audit Logs
+        </h2>
 
         <!-- Display Audit Logs -->
         <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-                <thead class="table-dark">
+            <table class="table table-hover">
+                <thead>
                     <tr>
                         <th>ID</th>
                         <th>User</th>
@@ -176,10 +236,20 @@ $stmt->close();
                         <?php foreach ($audit_logs as $log): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($log['id']); ?></td>
-                                <td><?php echo htmlspecialchars($log['username'] ?? 'System'); ?></td>
-                                <td><?php echo htmlspecialchars($log['action']); ?></td>
+                                <td>
+                                    <i class="fas fa-user-circle me-2"></i>
+                                    <?php echo htmlspecialchars($log['username'] ?? 'System'); ?>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">
+                                        <?php echo htmlspecialchars($log['action']); ?>
+                                    </span>
+                                </td>
                                 <td><?php echo htmlspecialchars($log['details']); ?></td>
-                                <td><?php echo htmlspecialchars($log['timestamp']); ?></td>
+                                <td>
+                                    <i class="fas fa-clock me-2"></i>
+                                    <?php echo date('M d, Y H:i:s', strtotime($log['timestamp'])); ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -195,24 +265,21 @@ $stmt->close();
         <?php if ($total_pages > 1): ?>
             <nav aria-label="Audit Logs Pagination">
                 <ul class="pagination">
-                    <!-- Previous Page Link -->
                     <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
-                        <a class="page-link" href="?page=<?php echo $page - 1; ?>" aria-label="Previous">
-                            <span aria-hidden="true">&laquo;</span>
+                        <a class="page-link" href="?page=<?php echo $page - 1; ?>">
+                            <i class="fas fa-chevron-left"></i>
                         </a>
                     </li>
 
-                    <!-- Page Number Links -->
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                         <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
                             <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
                         </li>
                     <?php endfor; ?>
 
-                    <!-- Next Page Link -->
                     <li class="page-item <?php if ($page >= $total_pages) echo 'disabled'; ?>">
-                        <a class="page-link" href="?page=<?php echo $page + 1; ?>" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
+                        <a class="page-link" href="?page=<?php echo $page + 1; ?>">
+                            <i class="fas fa-chevron-right"></i>
                         </a>
                     </li>
                 </ul>
@@ -220,7 +287,6 @@ $stmt->close();
         <?php endif; ?>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

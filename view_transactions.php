@@ -104,71 +104,83 @@ if (isset($_GET['delete'])) {
 <head>
     <title>View Transactions</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #2C3E50;
-            --success: #2ECC71;
-            --danger: #E74C3C;
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
         }
 
         body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', sans-serif;
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .page-header {
-            background: var(--primary);
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            min-height: 60px;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+            font-size: 1.1rem;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            background: var(--primary-color);
             color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
-        }
-
-        .filter-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-        }
-
-        .transactions-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-            padding: 1.5rem;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
         }
 
         .form-control, .form-select {
             border-radius: 8px;
             padding: 0.6rem 1rem;
-            border: 1px solid #e0e0e0;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
         }
 
-        .btn-filter {
-            background: var(--primary);
-            color: white;
-            padding: 0.6rem 1.5rem;
-            border-radius: 8px;
+        .btn-primary {
+            background: var(--primary-color);
             border: none;
-        }
-
-        .btn-filter:hover {
-            background: #34495E;
-            color: white;
-        }
-
-        .btn-reset {
-            background: #95a5a6;
-            color: white;
-            padding: 0.6rem 1.5rem;
+            padding: 0.6rem 1.2rem;
             border-radius: 8px;
-            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-1px);
         }
 
         .table {
@@ -176,207 +188,202 @@ if (isset($_GET['delete'])) {
         }
 
         .table thead th {
-            background: #f8f9fa;
-            border-bottom: 2px solid #e0e0e0;
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .table td {
-            vertical-align: middle;
+            background: var(--primary-color);
+            color: white;
+            font-weight: 500;
+            border: none;
+            padding: 1rem;
         }
 
         .badge-income {
-            background-color: var(--success);
+            background-color: var(--success-color);
             color: white;
             padding: 0.5em 1em;
             border-radius: 6px;
         }
 
         .badge-expense {
-            background-color: var(--danger);
+            background-color: var(--danger-color);
             color: white;
             padding: 0.5em 1em;
             border-radius: 6px;
         }
 
-        .amount-income {
-            color: var(--success);
-            font-weight: 600;
-        }
-
-        .amount-expense {
-            color: var(--danger);
-            font-weight: 600;
-        }
-
-        .action-btn {
+        .btn-action {
             padding: 0.4rem 0.8rem;
             border-radius: 6px;
-            color: white;
-            text-decoration: none;
-            margin-right: 0.5rem;
+            transition: all 0.3s ease;
         }
 
-        .btn-edit {
-            background: #3498db;
-        }
-
-        .btn-delete {
-            background: var(--danger);
-        }
-
-        .action-btn:hover {
-            opacity: 0.9;
-            color: white;
+        .btn-action:hover {
+            transform: translateY(-2px);
         }
 
         .empty-state {
-            text-align: center;
             padding: 3rem 1rem;
+            text-align: center;
             color: #6c757d;
         }
 
         .empty-state i {
             font-size: 3rem;
+            color: var(--primary-color);
+            opacity: 0.5;
             margin-bottom: 1rem;
         }
     </style>
 </head>
 <body>
-    <!-- Page Header -->
-    <div class="page-header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">Transaction History</h1>
-                <a href="add_transaction.php" class="btn btn-light">
-                    <i class="bi bi-plus-lg"></i> New Transaction
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-list me-2"></i>Transaction History
+            </a>
+            <div class="ms-auto">
+                <a href="user_dashboard.php" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
                 </a>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="container">
-        <!-- Display Success or Error Messages -->
+    <div class="container mt-4">
         <?php if (!empty($success)): ?>
-            <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <?php echo htmlspecialchars($success); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <?php echo htmlspecialchars($error); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
         <?php endif; ?>
 
-        <!-- Filter Section -->
-        <div class="filter-card">
-            <form method="GET" action="" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Transaction Type</label>
-                    <select name="type" class="form-select">
-                        <option value="">All Types</option>
-                        <option value="income" <?php echo (isset($_GET['type']) && $_GET['type'] == 'income') ? 'selected' : ''; ?>>Income</option>
-                        <option value="expense" <?php echo (isset($_GET['type']) && $_GET['type'] == 'expense') ? 'selected' : ''; ?>>Expense</option>
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label">Category</label>
-                    <select name="category" class="form-select">
-                        <option value="">All Categories</option>
-                        <?php foreach ($categories as $category): ?>
-                            <option value="<?php echo $category['id']; ?>" 
-                                <?php echo (isset($_GET['category']) && $_GET['category'] == $category['id']) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($category['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">Start Date</label>
-                    <input type="date" name="start_date" class="form-control" 
-                           value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : ''; ?>">
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">End Date</label>
-                    <input type="date" name="end_date" class="form-control" 
-                           value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : ''; ?>">
-                </div>
-
-                <div class="col-md-2 d-flex align-items-end">
-                    <div class="d-grid gap-2 w-100">
-                        <button type="submit" class="btn btn-filter">
-                            <i class="bi bi-funnel"></i> Filter
-                        </button>
-                        <a href="view_transactions.php" class="btn btn-reset">
-                            <i class="bi bi-arrow-counterclockwise"></i> Reset
-                        </a>
+        <!-- Filter Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-filter me-2"></i>Filter Transactions</span>
+                <a href="add_transaction.php" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus me-1"></i>New Transaction
+                </a>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Transaction Type</label>
+                        <select name="type" class="form-select">
+                            <option value="">All Types</option>
+                            <option value="income" <?php echo (isset($_GET['type']) && $_GET['type'] == 'income') ? 'selected' : ''; ?>>Income</option>
+                            <option value="expense" <?php echo (isset($_GET['type']) && $_GET['type'] == 'expense') ? 'selected' : ''; ?>>Expense</option>
+                        </select>
                     </div>
-                </div>
-            </form>
-        </div>
 
-        <!-- Transactions Table -->
-        <div class="transactions-card">
-            <?php if (count($transactions) > 0): ?>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th>Category</th>
-                                <th>Amount</th>
-                                <th>Type</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($transactions as $transaction): ?>
-                                <tr>
-                                    <td><?php echo date('M d, Y', strtotime($transaction['date'])); ?></td>
-                                    <td><?php echo htmlspecialchars($transaction['description']); ?></td>
-                                    <td><?php echo htmlspecialchars($transaction['category']); ?></td>
-                                    <td class="amount-<?php echo $transaction['type']; ?>">
-                                        <?php echo ($transaction['type'] == 'income' ? '+' : '-'); ?>
-                                        $<?php echo number_format($transaction['amount'], 2); ?>
-                                    </td>
-                                    <td>
-                                        <span class="<?php echo ($transaction['type'] == 'income') ? 'badge-income' : 'badge-expense'; ?>">
-                                            <?php echo ucfirst($transaction['type']); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="edit_transaction.php?id=<?php echo $transaction['id']; ?>" 
-                                           class="action-btn btn-edit" title="Edit Transaction">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a href="view_transactions.php?delete=<?php echo $transaction['id']; ?>" 
-                                           class="action-btn btn-delete"
-                                           onclick="return confirm('Are you sure you want to delete this transaction?');"
-                                           title="Delete Transaction">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    </td>
-                                </tr>
+                    <div class="col-md-3">
+                        <label class="form-label">Category</label>
+                        <select name="category" class="form-select">
+                            <option value="">All Categories</option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['id']; ?>" 
+                                    <?php echo (isset($_GET['category']) && $_GET['category'] == $category['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($category['name']); ?>
+                                </option>
                             <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <div class="empty-state">
-                    <i class="bi bi-inbox"></i>
-                    <h4>No Transactions Found</h4>
-                    <p>Try adjusting your filters or add a new transaction.</p>
-                </div>
-            <?php endif; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" 
+                               value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : ''; ?>">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" 
+                               value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : ''; ?>">
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="d-grid gap-2 w-100">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i> Search
+                            </button>
+                            <a href="view_transactions.php" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo me-1"></i> Reset
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <!-- Back Button -->
-        <div class="mt-4 text-center">
-            <a href="user_dashboard.php" class="btn btn-outline-primary">
-                <i class="bi bi-arrow-left"></i> Back to Dashboard
-            </a>
+        <!-- Transactions Card -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list me-2"></i>Transactions List
+            </div>
+            <div class="card-body p-0">
+                <?php if (count($transactions) > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($transactions as $transaction): ?>
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-calendar me-2"></i>
+                                            <?php echo date('M d, Y', strtotime($transaction['date'])); ?>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($transaction['description']); ?></td>
+                                        <td><?php echo htmlspecialchars($transaction['category']); ?></td>
+                                        <td class="fw-bold <?php echo $transaction['type'] == 'income' ? 'text-success' : 'text-danger'; ?>">
+                                            <?php echo ($transaction['type'] == 'income' ? '+' : '-'); ?>
+                                            $<?php echo number_format($transaction['amount'], 2); ?>
+                                        </td>
+                                        <td>
+                                            <span class="badge <?php echo $transaction['type'] == 'income' ? 'badge-income' : 'badge-expense'; ?>">
+                                                <?php echo ucfirst($transaction['type']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="edit_transaction.php?id=<?php echo $transaction['id']; ?>" 
+                                               class="btn btn-primary btn-action me-1">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="view_transactions.php?delete=<?php echo $transaction['id']; ?>" 
+                                               class="btn btn-danger btn-action"
+                                               onclick="return confirm('Are you sure you want to delete this transaction?');">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h4>No Transactions Found</h4>
+                        <p>Try adjusting your filters or add a new transaction.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 

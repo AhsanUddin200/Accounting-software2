@@ -3,6 +3,7 @@ require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
 
+// Ensure the user is an admin
 if ($_SESSION['role'] != 'admin') {
     header("Location: user_dashboard.php");
     exit();
@@ -12,34 +13,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
     $successes = [];
 
-    if (!isset($_POST['salaries']) || !is_array($_POST['salaries'])) {
-        $errors[] = "Invalid form submission.";
+    // CSRF Protection
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $errors[] = "Invalid CSRF token.";
     } else {
-        foreach ($_POST['salaries'] as $user_id => $salary) {
-            $salary = floatval($salary);
-            if ($salary < 0) {
-                $errors[] = "Invalid salary amount for User ID: $user_id.";
-                continue;
-            }
+        // Handle updating monthly_salary and current_month_salary
+        if (isset($_POST['salaries']) && is_array($_POST['salaries'])) {
+            foreach ($_POST['salaries'] as $user_id => $salary_data) {
+                $monthly_salary = floatval($salary_data['monthly_salary']);
+                $current_month_salary = floatval($salary_data['current_month_salary']);
 
-            $stmt = $conn->prepare("UPDATE users SET fixed_salary = ? WHERE id = ?");
-            if ($stmt) {
-                $stmt->bind_param("di", $salary, $user_id);
-                if ($stmt->execute()) {
-                    log_action($conn, $_SESSION['user_id'], 'Updated Salary', "Updated salary to $$salary for User ID: $user_id.");
-                    $successes[] = "Salary updated for User ID: $user_id.";
-                } else {
-                    $errors[] = "Failed to update salary for User ID: $user_id.";
+                if ($monthly_salary < 0 || $current_month_salary < 0) {
+                    $errors[] = "Invalid salary amount for User ID: $user_id.";
+                    continue;
                 }
-                $stmt->close();
-            } else {
-                $errors[] = "Database error: Unable to prepare statement.";
+
+                // Update 'monthly_salary' and 'current_month_salary' in 'users' table
+                $stmt_user = $conn->prepare("UPDATE users SET monthly_salary = ?, current_month_salary = ? WHERE id = ?");
+                if ($stmt_user) {
+                    $stmt_user->bind_param("ddi", $monthly_salary, $current_month_salary, $user_id);
+                    if ($stmt_user->execute()) {
+                        log_action($conn, $_SESSION['user_id'], 'Updated Salary', "Updated monthly salary to $$monthly_salary and current month salary to $$current_month_salary for User ID: $user_id.");
+                        $successes[] = "Salaries updated for User ID: $user_id.";
+                    } else {
+                        $errors[] = "Failed to update salaries for User ID: $user_id.";
+                    }
+                    $stmt_user->close();
+                } else {
+                    $errors[] = "Database error: Unable to prepare statement for User ID: $user_id.";
+                }
             }
         }
     }
 }
 
-$users_result = $conn->query("SELECT id, username, fixed_salary FROM users ORDER BY username ASC");
+// Fetch users with their salaries
+$users_result = $conn->query("SELECT id, username, monthly_salary, current_month_salary FROM users ORDER BY username ASC");
 if (!$users_result) {
     die("Query failed (Fetch Users): (" . $conn->errno . ") " . $conn->error);
 }
@@ -49,6 +58,11 @@ while ($user = $users_result->fetch_assoc()) {
     $users[] = $user;
 }
 $users_result->close();
+
+// Generate CSRF token if not set
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -59,6 +73,7 @@ $users_result->close();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* Existing styles */
         :root {
             --primary: #2C3E50;
             --secondary: #34495E;
@@ -69,7 +84,7 @@ $users_result->close();
         }   
 
         body {
-            body { background-color: #f8f9fa; },
+            background-color: #f8f9fa;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
@@ -108,16 +123,17 @@ $users_result->close();
             border-radius: 0.5rem;
             padding: 0.5rem;
             transition: all 0.2s;
+            text-align: right;
         }
 
         .salary-input:focus {
-            border-color: var(--primary-color);
+            border-color: var(--primary);
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
             outline: none;
         }
 
         .btn-update {
-            background-color: var(--primary-color);
+            background-color: var(--primary);
             border: none;
             padding: 0.75rem 2rem;
             font-weight: 500;
@@ -125,7 +141,7 @@ $users_result->close();
         }
 
         .btn-update:hover {
-            background-color: var(--secondary-color);
+            background-color: var(--secondary);
             transform: translateY(-1px);
         }
 
@@ -171,8 +187,8 @@ $users_result->close();
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link" href="admin_dashboard.php">
                             <i class="fas fa-tachometer-alt me-1"></i> Dashboard
@@ -247,8 +263,8 @@ $users_result->close();
                     <h3 class="mb-0">
                         <i class="fas fa-dollar-sign text-success me-2"></i>
                         <?php 
-                            $total_payroll = array_sum(array_column($users, 'fixed_salary'));
-                            echo number_format($total_payroll, 2);
+                            $total_payroll = array_sum(array_column($users, 'monthly_salary'));
+                            echo number_format($total_payroll, 0); // Display without decimals
                         ?>
                     </h3>
                 </div>
@@ -260,7 +276,7 @@ $users_result->close();
                         <i class="fas fa-chart-line text-info me-2"></i>
                         <?php 
                             $avg_salary = count($users) > 0 ? $total_payroll / count($users) : 0;
-                            echo number_format($avg_salary, 2);
+                            echo number_format($avg_salary, 0); // Display without decimals
                         ?>
                     </h3>
                 </div>
@@ -274,6 +290,7 @@ $users_result->close();
                 <?php foreach ($successes as $msg): ?>
                     <div><?php echo htmlspecialchars($msg); ?></div>
                 <?php endforeach; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
 
@@ -283,6 +300,7 @@ $users_result->close();
                 <?php foreach ($errors as $err): ?>
                     <div><?php echo htmlspecialchars($err); ?></div>
                 <?php endforeach; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
 
@@ -290,6 +308,7 @@ $users_result->close();
         <div class="card">
             <div class="card-body p-0">
                 <form method="POST" action="manage_salaries.php" id="salaryForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead>
@@ -297,12 +316,17 @@ $users_result->close();
                                     <th class="px-4">Employee ID</th>
                                     <th>Employee Name</th>
                                     <th class="text-end">Current Salary ($)</th>
-                                    <th class="text-end px-4">New Salary ($)</th>
+                                    <th class="text-end px-4">New Monthly Salary ($)</th>
+                                    <th class="text-end px-4">Current Month Salary ($)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (count($users) > 0): ?>
                                     <?php foreach ($users as $user): ?>
+                                        <?php
+                                            // Fetch current month's salary from 'users' table
+                                            $current_month_salary = $user['current_month_salary'];
+                                        ?>
                                         <tr>
                                             <td class="px-4">#<?php echo htmlspecialchars($user['id']); ?></td>
                                             <td>
@@ -314,22 +338,31 @@ $users_result->close();
                                                 </div>
                                             </td>
                                             <td class="text-end">
-                                                <?php echo number_format($user['fixed_salary'], 2); ?>
+                                                <?php echo number_format($user['monthly_salary'], 0); ?> <!-- Display without decimals -->
                                             </td>
                                             <td class="text-end px-4">
                                                 <input type="number" 
                                                        step="0.01" 
                                                        min="0" 
-                                                       name="salaries[<?php echo $user['id']; ?>]" 
+                                                       name="salaries[<?php echo $user['id']; ?>][monthly_salary]" 
                                                        class="form-control salary-input text-end" 
-                                                       value="<?php echo number_format($user['fixed_salary'], 2, '.', ''); ?>" 
+                                                       value="<?php echo htmlspecialchars($user['monthly_salary']); ?>" 
+                                                       required>
+                                            </td>
+                                            <td class="text-end px-4">
+                                                <input type="number" 
+                                                       step="0.01" 
+                                                       min="0" 
+                                                       name="salaries[<?php echo $user['id']; ?>][current_month_salary]" 
+                                                       class="form-control salary-input text-end" 
+                                                       value="<?php echo htmlspecialchars($current_month_salary); ?>" 
                                                        required>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="4" class="text-center py-4">
+                                        <td colspan="5" class="text-center py-4">
                                             <i class="fas fa-user-slash text-muted me-2"></i>
                                             No employees found.
                                         </td>
@@ -338,7 +371,6 @@ $users_result->close();
                             </tbody>
                         </table>
                     </div>
-                </form>
             </div>
             <div class="card-footer bg-light p-4">
                 <div class="d-flex justify-content-end">
@@ -347,6 +379,7 @@ $users_result->close();
                         Update All Salaries
                     </button>
                 </div>
+                </form>
             </div>
         </div>
     </div>
@@ -356,41 +389,37 @@ $users_result->close();
 
     <!-- Custom JavaScript -->
     <script>
-        // Add thousand separator to salary inputs
+        // Remove thousand separators and ensure float values
         document.querySelectorAll('.salary-input').forEach(input => {
             input.addEventListener('input', function(e) {
-                let value = this.value.replace(/[^\d.-]/g, '');
+                let value = this.value.replace(/[^\d.]/g, ''); // Remove non-digit and non-dot characters
                 if (value !== '') {
-                    value = parseFloat(value).toFixed(2);
-                    this.value = value;
+                    // Ensure only one decimal point
+                    const parts = value.split('.');
+                    if (parts.length > 2) {
+                        value = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    this.value = parseFloat(value).toFixed(2);
+                } else {
+                    this.value = '';
                 }
             });
         });
 
         // Confirm before submitting changes
-        document.getElementById('salaryForm').addEventListener('submit', function// Confirm before submitting changes
         document.getElementById('salaryForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const confirmMsg = `Are you sure you want to update the salaries?
-                              This action will:
-                              - Update all employee salaries
-                              - Take effect immediately
-                              - Be logged in the system`;
-            
+This action will:
+- Update all employee salaries
+- Set current month's salaries
+- Take effect immediately
+- Be logged in the system`;
+    
             if (confirm(confirmMsg)) {
                 this.submit();
             }
-        });
-
-        // Auto-format salary inputs on blur
-        document.querySelectorAll('.salary-input').forEach(input => {
-            input.addEventListener('blur', function() {
-                if (this.value) {
-                    const formattedValue = parseFloat(this.value).toFixed(2);
-                    this.value = formattedValue;
-                }
-            });
         });
 
         // Highlight changed values

@@ -234,6 +234,11 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="upload_attendance.php">
+                            <i class="fas fa-clock me-1"></i> Upload Attendance
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="logout.php">
                             <i class="fas fa-sign-out-alt me-1"></i> Logout
                             (<?php echo htmlspecialchars($_SESSION['username']); ?>)
@@ -308,6 +313,9 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <a href="process_salaries.php" class="quick-action-btn btn btn-success">
                         <i class="fas fa-tasks me-2"></i>Process Salaries
                     </a>
+                    <a href="upload_attendance.php" class="quick-action-btn btn btn-secondary">
+                        <i class="fas fa-clock me-2"></i>Upload Attendance
+                    </a>
                     <a href="view_audit_logs.php" class="quick-action-btn btn btn-info">
                         <i class="fas fa-history me-2"></i>View Audit Logs
                     </a>
@@ -371,10 +379,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                             <tr>
                                 <td><?php echo htmlspecialchars($income['description']); ?></td>
                                 <td>$<?php echo number_format($income['amount'], 2); ?></td>
-                                <td><?php echo
-
-
-htmlspecialchars(date('M d, Y', strtotime($income['date']))); ?></td>
+                                <td><?php echo htmlspecialchars(date('M d, Y', strtotime($income['date']))); ?></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>

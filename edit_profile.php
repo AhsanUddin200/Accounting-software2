@@ -143,108 +143,234 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html>
 <head>
     <title>Edit Profile</title>
-    <!-- Include Bootstrap CSS for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+
+        body {
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            min-height: 60px;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+            font-size: 1.1rem;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-1px);
+        }
+
         .profile-avatar {
             width: 150px;
             height: 150px;
             object-fit: cover;
             border-radius: 50%;
-            margin-bottom: 15px;
-            border: 2px solid var(--primary);
+            border: 3px solid var(--primary-color);
+            padding: 3px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
         }
+
+        .profile-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+        }
+
+        .alert-success {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+        }
+
+        .alert-danger {
+            background-color: rgba(192, 57, 43, 0.1);
+            color: var(--danger-color);
+        }
+
         .form-label {
-            font-weight: 600;
+            font-weight: 500;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 2rem 0;
         }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-secondary">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">Financial Management System</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item">
-                        <a class="nav-link" href="user_dashboard.php">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="edit_profile.php">Edit Profile</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="view_transactions.php">View Transactions</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="add_transaction.php">Add Transaction</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</a>
-                    </li>
-                </ul>
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-user-edit me-2"></i>Edit Profile
+            </a>
+            <div class="ms-auto">
+                <a href="user_dashboard.php" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                </a>
             </div>
         </div>
     </nav>
 
-    <!-- Edit Profile Content -->
-    <div class="container mt-5 mb-5">
+    <div class="container mt-4">
         <div class="row justify-content-center">
-            <div class="col-md-8">
-                <!-- Success Message -->
+            <div class="col-lg-8">
                 <?php if (!empty($success)): ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
                         <?php echo htmlspecialchars($success); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
-                <!-- Error Message -->
                 <?php if (!empty($error)): ?>
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
                         <?php echo htmlspecialchars($error); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h3 class="card-title text-center mb-4">Edit Your Profile</h3>
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-user-circle me-2"></i>Profile Information
+                    </div>
+                    <div class="card-body p-4">
                         <form method="POST" enctype="multipart/form-data" action="edit_profile.php">
-                            <!-- CSRF Token -->
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
 
                             <div class="text-center mb-4">
-                                <img src="<?php echo htmlspecialchars($avatar_path ? $avatar_path : 'uploads/avatars/default_avatar.png'); ?>" alt="Avatar" class="profile-avatar" id="avatarPreview">
+                                <img src="<?php echo htmlspecialchars($avatar_path ? $avatar_path : 'uploads/avatars/default_avatar.png'); ?>" 
+                                     alt="Profile Avatar" class="profile-avatar" id="avatarPreview">
+                                <div class="mt-3">
+                                    <label for="avatar" class="btn btn-outline-primary">
+                                        <i class="fas fa-camera me-2"></i>Change Avatar
+                                    </label>
+                                    <input type="file" name="avatar" id="avatar" class="d-none" accept="image/*" 
+                                           onchange="previewAvatar(event)">
+                                    <div class="text-muted small mt-2">
+                                        Allowed formats: JPG, PNG, GIF (Max: 2MB)
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-3 text-center">
-                                <label for="avatar" class="form-label">Change Avatar</label>
-                                <input type="file" name="avatar" id="avatar" class="form-control" accept="image/*" onchange="previewAvatar(event)">
-                                <small class="form-text text-muted">Allowed types: JPG, PNG, GIF. Max size: 2MB.</small>
-                            </div>
+
                             <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
-                                <input type="text" name="username" id="username" class="form-control" required value="<?php echo htmlspecialchars($username); ?>">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Username
+                                </label>
+                                <input type="text" name="username" id="username" class="form-control" required 
+                                       value="<?php echo htmlspecialchars($username); ?>">
                             </div>
+
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email Address</label>
-                                <input type="email" name="email" id="email" class="form-control" required value="<?php echo htmlspecialchars($email); ?>">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email Address
+                                </label>
+                                <input type="email" name="email" id="email" class="form-control" required 
+                                       value="<?php echo htmlspecialchars($email); ?>">
                             </div>
-                            <hr>
-                            <h5>Change Password</h5>
+
+                            <div class="divider"></div>
+
+                            <h5 class="mb-3">
+                                <i class="fas fa-lock me-2"></i>Change Password
+                            </h5>
+
                             <div class="mb-3">
                                 <label for="password" class="form-label">New Password</label>
-                                <input type="password" name="password" id="password" class="form-control" placeholder="Leave blank to keep current password">
+                                <input type="password" name="password" id="password" class="form-control" 
+                                       placeholder="Leave blank to keep current password">
                             </div>
+
                             <div class="mb-4">
                                 <label for="confirm_password" class="form-label">Confirm New Password</label>
-                                <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="Leave blank to keep current password">
+                                <input type="password" name="confirm_password" id="confirm_password" 
+                                       class="form-control" placeholder="Leave blank to keep current password">
                             </div>
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">Update Profile</button>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Update Profile
+                                </button>
+                                <a href="user_dashboard.php" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-2"></i>Cancel
+                                </a>
                             </div>
                         </form>
                     </div>
@@ -253,7 +379,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <!-- JavaScript for Avatar Preview -->
     <script>
         function previewAvatar(event) {
             const avatarPreview = document.getElementById('avatarPreview');
@@ -268,7 +393,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </script>
 
-    <!-- Include Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

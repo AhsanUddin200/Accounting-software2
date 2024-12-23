@@ -51,265 +51,211 @@ if (!$cat_result) {
 <head>
     <title>Add Transaction</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #2C3E50;
-            --secondary: #34495E;
-            --success: #27AE60;
-            --danger: #C0392B;
-            --gray-100: #F7FAFC;
-            --gray-200: #EDF2F7;
-            --gray-300: #E2E8F0;
-            --gray-400: #CBD5E0;
-            --gray-500: #A0AEC0;
-            --gray-600: #718096;
-            --gray-700: #4A5568;
-            --gray-800: #2D3748;
-            --gray-900: #1A202C;
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
         }
 
         body {
-            background-color: var(--gray-100);
-            font-family: 'Segoe UI', sans-serif;
-            color: var(--gray-800);
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* Header */
-        .page-header {
-            background: var(--gray-800);
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            min-height: 60px;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+            font-size: 1.1rem;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            background: var(--primary-color);
             color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Card */
-        .transaction-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            padding: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        /* Form Controls */
-        .form-label {
-            font-weight: 500;
-            color: var(--gray-700);
-            margin-bottom: 0.5rem;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
         }
 
         .form-control, .form-select {
             border-radius: 8px;
-            border: 2px solid var(--gray-300);
-            padding: 0.75rem 1rem;
-            color: var(--gray-800);
-            background-color: white;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: var(--gray-600);
-            box-shadow: 0 0 0 3px rgba(113, 128, 150, 0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
         }
 
         .input-group-text {
-            background-color: var(--gray-200);
-            border: 2px solid var(--gray-300);
+            background-color: #f8fafc;
+            border: 2px solid #e2e8f0;
             border-right: none;
-            color: var(--gray-700);
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.2s ease;
         }
 
         .btn-primary {
-            background: var(--gray-800);
+            background: var(--primary-color);
             border: none;
-            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }
 
         .btn-primary:hover {
-            background: var(--gray-900);
+            background: var(--secondary-color);
             transform: translateY(-1px);
         }
 
-        .btn-secondary {
-            background: var(--gray-500);
-            border: none;
-            color: white;
+        .form-label {
+            font-weight: 500;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
         }
 
-        .btn-secondary:hover {
-            background: var(--gray-600);
-            transform: translateY(-1px);
-        }
-
-        /* Alerts */
-        .alert {
-            border-radius: 8px;
-            border: 1px solid transparent;
-        }
-
-        .alert-success {
-            background-color: #F0FDF4;
-            border-color: #BBF7D0;
-            color: #166534;
-        }
-
-        .alert-danger {
-            background-color: #FEF2F2;
-            border-color: #FECACA;
-            color: #991B1B;
-        }
-
-        /* Required Field */
         .required-field::after {
             content: "*";
-            color: var(--danger);
+            color: var(--danger-color);
             margin-left: 4px;
         }
 
-        /* Table */
-        .table {
-            color: var(--gray-800);
-        }
-
-        .table thead th {
-            background: var(--gray-100);
-            border-bottom: 2px solid var(--gray-200);
-            color: var(--gray-700);
-            font-weight: 600;
-        }
-
-        .table td {
-            border-bottom: 1px solid var(--gray-200);
-            vertical-align: middle;
-        }
-
-        /* Action Buttons */
-        .action-btn {
-            padding: 0.5rem;
-            border-radius: 6px;
+        .alert {
+            border-radius: 8px;
             border: none;
-            background: var(--gray-200);
-            color: var(--gray-700);
-            transition: all 0.2s ease;
         }
 
-        .action-btn:hover {
-            background: var(--gray-300);
-            color: var(--gray-900);
+        .alert-success {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .transaction-card {
-                padding: 1.5rem;
-            }
-            
-            .btn {
-                width: 100%;
-                margin-bottom: 0.5rem;
-            }
+        .alert-danger {
+            background-color: rgba(192, 57, 43, 0.1);
+            color: var(--danger-color);
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="page-header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">Add New Transaction</h1>
-                <a href="view_transactions.php" class="btn btn-outline-light btn-sm">
-                    <i class="bi bi-arrow-left"></i> Back
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-plus-circle me-2"></i>Add Transaction
+            </a>
+            <div class="ms-auto">
+                <a href="view_transactions.php" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Transactions
                 </a>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="container">
+    <div class="container mt-4">
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <div class="transaction-card">
-                    <!-- Alerts -->
-                    <?php if (isset($success)): ?>
-                        <div class="alert alert-success d-flex align-items-center mb-4">
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                            <?php echo htmlspecialchars($success); ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (isset($error)): ?>
-                        <div class="alert alert-danger d-flex align-items-center mb-4">
-                            <i class="bi bi-exclamation-circle-fill me-2"></i>
-                            <?php echo htmlspecialchars($error); ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- Form -->
-                    <form method="POST" action="add_transaction.php">
-                        <div class="mb-4">
-                            <label class="form-label required-field">Amount</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" step="0.01" class="form-control" name="amount" 
-                                       placeholder="Enter amount" required>
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-plus-circle me-2"></i>New Transaction Details
+                    </div>
+                    <div class="card-body p-4">
+                        <?php if (isset($success)): ?>
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <?php echo htmlspecialchars($success); ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
-                        </div>
+                        <?php endif; ?>
 
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label required-field">Type</label>
-                                <select class="form-select" name="type" required>
-                                    <option value="">Select Type</option>
-                                    <option value="income">Income</option>
-                                    <option value="expense">Expense</option>
-                                </select>
+                        <?php if (isset($error)): ?>
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                <?php echo htmlspecialchars($error); ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label required-field">Category</label>
-                                <select class="form-select" name="category" required>
-                                    <option value="">Select Category</option>
-                                    <?php while($row = $cat_result->fetch_assoc()): ?>
-                                        <option value="<?php echo $row['id']; ?>">
-                                            <?php echo htmlspecialchars($row['name']); ?>
-                                        </option>
-                                    <?php endwhile; ?>
-                                </select>
+                        <?php endif; ?>
+
+                        <form method="POST" action="add_transaction.php">
+                            <div class="mb-4">
+                                <label class="form-label required-field">Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" class="form-control" name="amount" 
+                                           placeholder="Enter amount" required>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="mb-4">
-                            <label class="form-label required-field">Date</label>
-                            <input type="date" class="form-control" name="date" required>
-                        </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label required-field">Type</label>
+                                    <select class="form-select" name="type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="income">Income</option>
+                                        <option value="expense">Expense</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label required-field">Category</label>
+                                    <select class="form-select" name="category" required>
+                                        <option value="">Select Category</option>
+                                        <?php while($row = $cat_result->fetch_assoc()): ?>
+                                            <option value="<?php echo $row['id']; ?>">
+                                                <?php echo htmlspecialchars($row['name']); ?>
+                                            </option>
+                                        <?php endwhile; ?>
+                                    </select>
+                                </div>
+                            </div>
 
-                        <div class="mb-4">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-control" name="description" 
-                                    placeholder="Enter description" rows="3"></textarea>
-                        </div>
+                            <div class="mb-4">
+                                <label class="form-label required-field">Date</label>
+                                <input type="date" class="form-control" name="date" required>
+                            </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-plus-circle me-2"></i>Add Transaction
+                            <div class="mb-4">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="description" 
+                                        placeholder="Enter description" rows="3"></textarea>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Save Transaction
                                 </button>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <a href="view_transactions.php" class="btn btn-secondary w-100">
-                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                <a href="view_transactions.php" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-2"></i>Cancel
                                 </a>
                             </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
