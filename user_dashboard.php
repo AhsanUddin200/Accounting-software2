@@ -265,7 +265,7 @@
                         <li class="nav-item d-flex align-items-center">
                             <img src="<?php echo htmlspecialchars($avatar_path); ?>" alt="Avatar" class="avatar-img me-2">
                             <span class="nav-link">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</span>
-                            <a class="nav-link ms-2" href="logout.php">Logout</a>
+                           
                         </li>
                     </ul>
                 </div>

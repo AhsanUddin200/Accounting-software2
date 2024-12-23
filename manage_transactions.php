@@ -162,7 +162,7 @@ if ($result) {
             <i class="fas fa-calculator me-2"></i>Financial Management System
         </div>
         <div class="right-section">
-            <a href="dashboard.php"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+            <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
             <a href="manage_users.php"><i class="fas fa-users me-1"></i>Manage Users</a>
             <a href="logout.php"><i class="fas fa-sign-out-alt me-1"></i>Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</a>
         </div>
