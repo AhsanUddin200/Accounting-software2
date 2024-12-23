@@ -124,36 +124,7 @@ foreach ($transactions as $transaction) {
 }
 
 // Add summary section after the filter
-echo '<div class="summary-cards mb-4">
-        <div class="row">
-            <div class="col-md-4">
-                <div class="card summary-card">
-                    <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">Total Income</h6>
-                        <h3 class="card-title text-success">$' . number_format($total_income, 2) . '</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card summary-card">
-                    <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">Total Expenses</h6>
-                        <h3 class="card-title text-danger">$' . number_format($total_expenses, 2) . '</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card summary-card">
-                    <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">Net Balance</h6>
-                        <h3 class="card-title ' . ($total_income - $total_expenses >= 0 ? 'text-success' : 'text-danger') . '">
-                            $' . number_format($total_income - $total_expenses, 2) . '
-                        </h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>';
+
 ?>
 <!DOCTYPE html>
 <html>

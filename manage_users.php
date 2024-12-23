@@ -249,192 +249,228 @@ if ($stmt) {
 <html>
 <head>
     <title>Manage Users</title>
-    <!-- Include Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Add Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .container { margin-top: 30px; }
-        .card-header { background-color: #6c757d; color: white; }
-        .delete-button { color: #dc3545; }
-        .delete-button:hover { color: #c82333; text-decoration: none; }
-        .edit-button { color: #0d6efd; }
-        .edit-button:hover { color: #0a58ca; text-decoration: none; }
-        .form-control:focus, .form-select:focus {
-            box-shadow: none;
-            border-color: #6c757d;
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #27AE60;
+            --danger-color: #C0392B;
+            --warning-color: #f72585;
+            --info-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
         }
-        .table th a {
-            color: inherit;
-            text-decoration: none;
+
+        body {
+            background-color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .table th a:hover {
-            text-decoration: underline;
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            min-height: 60px;
         }
-        .header {
-            background-color: #6c757d;
-            padding: 15px 30px;
-            color: white;
+
+        .filter-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .filter-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 1.5rem;
         }
-        .left-section {
-            font-size: 1.25rem;
-            font-weight: bold;
+
+        .filter-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
         }
-        .right-section a {
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            background: var(--primary-color);
             color: white;
-            text-decoration: none;
-            margin-left: 20px;
-            transition: opacity 0.3s;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
         }
-        .right-section a:hover {
-            opacity: 0.8;
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table th {
+            border-top: none;
+            background-color: #f8f9fa;
+            padding: 1rem;
+        }
+
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .btn-action {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .badge-admin {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .badge-user {
+            background-color: var(--info-color);
+            color: white;
+        }
+
+        .btn-add-user {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-add-user:hover {
+            background: #219a52;
+            transform: translateY(-1px);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box .form-control {
+            padding-left: 2.5rem;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #718096;
+        }
+
+        .pagination {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .page-link {
+            color: var(--primary-color);
+            border: none;
+            padding: 0.5rem 1rem;
+            margin: 0 0.2rem;
+            border-radius: 6px;
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="left-section">
-            <i class="fas fa-calculator me-2"></i>Financial Management System
-        </div>
-        <div class="right-section">
-            <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
-            <a href="manage_users.php"><i class="fas fa-users me-1"></i>Manage Users</a>
-            <a href="logout.php"><i class="fas fa-sign-out-alt me-1"></i>Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)</a>
-        </div>
-    </div>
-
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Display Success or Error Messages -->
-        <?php if (!empty($success)): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo htmlspecialchars($success); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-        <?php if (!empty($error)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo htmlspecialchars($error); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
-        <!-- Add User Card -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Add New User</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="manage_users.php">
-                    <!-- CSRF Token -->
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email address" required>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
-                            <select class="form-select" id="role" name="role" required>
-                                <option value="">Select role</option>
-                                <option value="admin">Admin</option>
-                                <option value="user">User</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <button type="submit" name="add_user" class="btn btn-primary">Add User</button>
-                </form>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-users me-2"></i>Manage Users
+            </a>
+            <div class="ms-auto">
+                <a href="admin_dashboard.php" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                </a>
             </div>
         </div>
+    </nav>
 
-        <!-- Search and Filter -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <form method="GET" action="manage_users.php" class="d-flex">
-                    <input type="text" name="search" class="form-control me-2" placeholder="Search by username or email" value="<?php echo htmlspecialchars($search); ?>">
-                    <button type="submit" class="btn btn-outline-secondary">Search</button>
-                </form>
+    <div class="container mt-4">
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-header">
+                <div class="filter-title">
+                    <i class="fas fa-filter me-2"></i>Filter Users
+                </div>
+                <button type="button" class="btn btn-add-user" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i class="fas fa-plus me-2"></i>Add New User
+                </button>
             </div>
-            <div class="col-md-3">
-                <form method="GET" action="manage_users.php">
-                    <select class="form-select" name="filter_role" onchange="this.form.submit()">
-                        <option value="">Filter by role</option>
-                        <option value="admin" <?php echo ($filter_role == 'admin') ? 'selected' : ''; ?>>Admin</option>
-                        <option value="user" <?php echo ($filter_role == 'user') ? 'selected' : ''; ?>>User</option>
+            
+            <form method="GET" class="filter-form">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="search" class="form-control" placeholder="Search users..." 
+                           value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
+                </div>
+
+                <div>
+                    <select name="filter_role" class="form-select">
+                        <option value="">All Roles</option>
+                        <option value="admin" <?php echo (isset($_GET['filter_role']) && $_GET['filter_role'] == 'admin') ? 'selected' : ''; ?>>Admin</option>
+                        <option value="user" <?php echo (isset($_GET['filter_role']) && $_GET['filter_role'] == 'user') ? 'selected' : ''; ?>>User</option>
                     </select>
-                </form>
-            </div>
-            <div class="col-md-3 text-end">
-                <form method="POST" action="manage_users.php">
-                    <!-- CSRF Token -->
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                    <button type="submit" name="export_csv" class="btn btn-success">
-                        <i class="bi bi-download"></i> Export CSV
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i> Search
                     </button>
-                </form>
-            </div>
+                    <a href="manage_users.php" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo me-1"></i> Reset
+                    </a>
+                </div>
+            </form>
         </div>
 
-        <!-- Users Table Card -->
+        <!-- Users Table -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">All Users</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-users me-2"></i>Users List</span>
+                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#exportModal">
+                    <i class="fas fa-download me-1"></i>Export CSV
+                </button>
             </div>
             <div class="card-body p-0">
                 <?php if (!empty($users)): ?>
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
+                        <table class="table table-hover">
+                            <thead>
                                 <tr>
-                                    <th>
-                                        <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'id', 'order' => ($sort == 'id' && $order == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                            ID
-                                            <?php if ($sort == 'id'): ?>
-                                                <i class="bi bi-arrow-<?php echo ($order == 'ASC') ? 'up' : 'down'; ?>-short"></i>
-                                            <?php endif; ?>
-                                        </a>
-                                    </th>
-                                    <th>
-                                        <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'username', 'order' => ($sort == 'username' && $order == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                            Username
-                                            <?php if ($sort == 'username'): ?>
-                                                <i class="bi bi-arrow-<?php echo ($order == 'ASC') ? 'up' : 'down'; ?>-short"></i>
-                                            <?php endif; ?>
-                                        </a>
-                                    </th>
-                                    <th>
-                                        <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'email', 'order' => ($sort == 'email' && $order == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                            Email
-                                            <?php if ($sort == 'email'): ?>
-                                                <i class="bi bi-arrow-<?php echo ($order == 'ASC') ? 'up' : 'down'; ?>-short"></i>
-                                            <?php endif; ?>
-                                        </a>
-                                    </th>
-                                    <th>
-                                        <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'role', 'order' => ($sort == 'role' && $order == 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                                            Role
-                                            <?php if ($sort == 'role'): ?>
-                                                <i class="bi bi-arrow-<?php echo ($order == 'ASC') ? 'up' : 'down'; ?>-short"></i>
-                                            <?php endif; ?>
-                                        </a>
-                                    </th>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -442,49 +478,31 @@ if ($stmt) {
                                 <?php foreach ($users as $user): ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($user['id']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['email']); ?></td>
                                         <td>
-                                            <?php if ($user['role'] == 'admin'): ?>
-                                                <span class="badge bg-warning text-dark">Admin</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-info text-dark">User</span>
-                                            <?php endif; ?>
+                                            <i class="fas fa-user me-2"></i>
+                                            <?php echo htmlspecialchars($user['username']); ?>
                                         </td>
                                         <td>
-                                            <div class="action-buttons">
-                                                <a href="edit_user.php?id=<?php echo $user['id']; ?>" class="edit-button" title="Edit User">
-                                                    <i class="bi bi-pencil-fill"></i>
+                                            <i class="fas fa-envelope me-2"></i>
+                                            <?php echo htmlspecialchars($user['email']); ?>
+                                        </td>
+                                        <td>
+                                            <span class="badge <?php echo $user['role'] == 'admin' ? 'badge-admin' : 'badge-user'; ?>">
+                                                <?php echo ucfirst($user['role']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="edit_user.php?id=<?php echo $user['id']; ?>" 
+                                                   class="btn btn-primary btn-action me-2">
+                                                    <i class="fas fa-edit"></i>
                                                 </a>
                                                 <?php if ($user['id'] != $_SESSION['user_id']): ?>
-                                                    <button type="button" class="delete-button btn btn-link text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<?php echo $user['id']; ?>" title="Delete User">
-                                                        <i class="bi bi-trash-fill"></i>
+                                                    <button type="button" class="btn btn-danger btn-action" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#deleteModal<?php echo $user['id']; ?>">
+                                                        <i class="fas fa-trash"></i>
                                                     </button>
-
-                                                    <!-- Delete Confirmation Modal -->
-                                                    <div class="modal fade" id="deleteModal<?php echo $user['id']; ?>" tabindex="-1" aria-labelledby="deleteModalLabel<?php echo $user['id']; ?>" aria-hidden="true">
-                                                        <div class="modal-dialog">
-                                                            <div class="modal-content">
-                                                                <form method="POST" action="manage_users.php">
-                                                                    <div class="modal-header">
-                                                                        <h5 class="modal-title" id="deleteModalLabel<?php echo $user['id']; ?>">Confirm Deletion</h5>
-                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                    </div>
-                                                                    <div class="modal-body">
-                                                                        Are you sure you want to delete user <strong><?php echo htmlspecialchars($user['username']); ?></strong>?
-                                                                    </div>
-                                                                    <div class="modal-footer">
-                                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                                                                        <input type="hidden" name="delete_id" value="<?php echo $user['id']; ?>">
-                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                        <button type="submit" name="delete_user" class="btn btn-danger">Delete</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <span class="text-muted">Self</span>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
@@ -493,67 +511,33 @@ if ($stmt) {
                             </tbody>
                         </table>
                     </div>
-
+                    
                     <!-- Pagination -->
                     <?php if ($total_pages > 1): ?>
-                        <nav aria-label="User pagination">
-                            <ul class="pagination justify-content-center mt-3">
-                                <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
-                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
-                                        <span aria-hidden="true">&laquo;</span>
-                                    </a>
-                                </li>
+                        <nav aria-label="Page navigation" class="p-3">
+                            <ul class="pagination justify-content-center mb-0">
                                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                    <li class="page-item <?php if ($i == $page) echo 'active'; ?>">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                                    <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                                        <a class="page-link" href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>">
+                                            <?php echo $i; ?>
+                                        </a>
                                     </li>
                                 <?php endfor; ?>
-                                <li class="page-item <?php if ($page >= $total_pages) echo 'disabled'; ?>">
-                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
-                                        <span aria-hidden="true">&raquo;</span>
-                                    </a>
-                                </li>
                             </ul>
                         </nav>
                     <?php endif; ?>
                 <?php else: ?>
-                    <div class="p-4 text-center">
-                        <p class="mb-0">No users found.</p>
+                    <div class="text-center p-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No users found</p>
                     </div>
                 <?php endif; ?>
             </div>
         </div>
+    </div>
 
-        <!-- Export to CSV Confirmation Modal -->
-        <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form method="POST" action="manage_users.php">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="exportModalLabel">Export Users to CSV</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            Are you sure you want to export the users list to a CSV file?
-                        </div>
-                        <div class="modal-footer">
-                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" name="export_csv" class="btn btn-success">Export</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <!-- Include your modals here (Add User, Delete User, Export) -->
 
-        <!-- Trigger Export Modal via Button -->
-        <script>
-            // Optional: Trigger the export modal when export button is clicked
-            // Currently, export is directly handled on button click without confirmation
-            // If you want to add confirmation, modify the export button to trigger the modal
-        </script>
-
-        <!-- Include Bootstrap JS and dependencies -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>
