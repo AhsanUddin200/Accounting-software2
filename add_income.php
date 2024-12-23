@@ -17,29 +17,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         die("Invalid CSRF token.");
     }
 
-    $description = trim($_POST['description']);
-    $amount = trim($_POST['amount']);
-    $date = trim($_POST['date']);
+    $amount = $_POST['amount'];
+    $description = $_POST['description'];
+    $date = $_POST['date'];
     $admin_id = $_SESSION['user_id'];
 
-    if (empty($description) || empty($amount) || empty($date)) {
-        $error = "All fields are required.";
-    } elseif (!is_numeric($amount) || $amount <= 0) {
-        $error = "Amount must be a positive number.";
-    } else {
-        $stmt = $conn->prepare("INSERT INTO transactions (type, description, amount, date, user_id, added_by_admin_id) VALUES ('income', ?, ?, ?, NULL, ?)");
-        if ($stmt) {
-            $stmt->bind_param("sdsi", $description, $amount, $date, $admin_id);
-            if ($stmt->execute()) {
-                log_action($conn, $admin_id, 'Added Income', "Description: $description, Amount: $amount, Date: $date");
-                $success = "Income added successfully.";
-            } else {
-                $error = "Failed to add income: (" . $stmt->errno . ") " . $stmt->error;
-            }
-            $stmt->close();
+    // Insert the income transaction
+    $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description, date) 
+                           VALUES (?, ?, 'income', ?, ?)");
+    if ($stmt) {
+        $stmt->bind_param("idss", $admin_id, $amount, $description, $date);
+        if ($stmt->execute()) {
+            $success = "Income added successfully!";
         } else {
-            $error = "Prepare failed: (" . $conn->errno . ") " . $conn->error;
+            $error = "Error adding income: " . $stmt->error;
         }
+        $stmt->close();
     }
 }
 ?>

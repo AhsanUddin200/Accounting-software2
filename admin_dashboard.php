@@ -11,20 +11,37 @@ if ($_SESSION['role'] != 'admin') {
     exit();
 }
 
+// Calculate total income and expenses
+$income_query = "SELECT 
+    COALESCE(SUM(CASE 
+        WHEN type = 'income' THEN amount 
+        ELSE 0 
+    END), 0) as total_income,
+    COALESCE(SUM(CASE 
+        WHEN type = 'expense' THEN amount 
+        ELSE 0 
+    END), 0) as total_expenses
+FROM transactions 
+WHERE user_id = ?";
+
+$stmt = $conn->prepare($income_query);
+if ($stmt) {
+    $admin_id = $_SESSION['user_id'];
+    $stmt->bind_param("i", $admin_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    
+    $total_income = $row['total_income'];
+    $total_expenses = $row['total_expenses'];
+    $net_balance = $total_income - $total_expenses;
+    
+    $stmt->close();
+}
+
 // Fetch total number of users
 $user_count_result = $conn->query("SELECT COUNT(*) as total_users FROM users");
 $user_count = $user_count_result->fetch_assoc()['total_users'] ?? 0;
-
-// Fetch total income
-$income_result = $conn->query("SELECT SUM(amount) as total_income FROM transactions WHERE type = 'income'");
-$total_income = $income_result->fetch_assoc()['total_income'] ?? 0;
-
-// Fetch total expenses
-$expense_result = $conn->query("SELECT SUM(amount) as total_expenses FROM transactions WHERE type = 'expense'");
-$total_expenses = $expense_result->fetch_assoc()['total_expenses'] ?? 0;
-
-// Calculate net balance
-$net_balance = $total_income - $total_expenses;
 
 // Fetch recent audit logs
 $stmt = $conn->prepare("SELECT audit_logs.*, users.username FROM audit_logs 

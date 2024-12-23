@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             // Fetch all users with current_month_salary set
-            $current_month = date('Y-m'); // e.g., 2023-10
+            $current_month = date('Y-m');
             $stmt = $conn->prepare("SELECT id, username, current_month_salary FROM users WHERE current_month_salary > 0");
             if (!$stmt) {
                 throw new Exception("Failed to prepare statement: " . $conn->error);
@@ -64,33 +64,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $username = $user['username'];
                 $salary_amount = $user['current_month_salary'];
                 $total_salary += $salary_amount;
-
-                // Assign date to a variable
                 $salary_date = $current_month . "-01";
 
-                // Insert 'income' transaction for the user
-                $user_salary_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
-                                                    VALUES (?, ?, 'income', ?, ?, 'Monthly Salary')");
-                if (!$user_salary_stmt) {
-                    throw new Exception("Failed to prepare user salary transaction for User ID $user_id: " . $conn->error);
-                }
-                $user_salary_stmt->bind_param("idis", $user_id, $salary_amount, $salary_category_id, $salary_date);
-                if (!$user_salary_stmt->execute()) {
-                    throw new Exception("Failed to execute user salary transaction for User ID $user_id: " . $user_salary_stmt->error);
-                }
-                $user_salary_stmt->close();
-
-                // Insert 'expense' transaction for the admin
-                $admin_expense_stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
-                                                      VALUES (?, ?, 'expense', ?, ?, 'Monthly Salary Payment to $username')");
+                // First, DEDUCT from admin's account (record as expense)
+                $admin_expense_stmt = $conn->prepare("
+                    INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
+                    VALUES (?, ?, 'expense', ?, ?, ?)
+                ");
                 if (!$admin_expense_stmt) {
-                    throw new Exception("Failed to prepare admin expense transaction for User ID $user_id: " . $conn->error);
+                    throw new Exception("Failed to prepare admin expense transaction");
                 }
-                $admin_expense_stmt->bind_param("idis", $admin_id, $salary_amount, $salary_category_id, $salary_date);
+                $admin_description = "Salary Payment: $username";
+                $admin_expense_stmt->bind_param("idiss", $admin_id, $salary_amount, $salary_category_id, $salary_date, $admin_description);
                 if (!$admin_expense_stmt->execute()) {
-                    throw new Exception("Failed to execute admin expense transaction for User ID $user_id: " . $admin_expense_stmt->error);
+                    throw new Exception("Failed to record admin expense");
                 }
                 $admin_expense_stmt->close();
+
+                // Then, add to user's account (record as income)
+                $user_income_stmt = $conn->prepare("
+                    INSERT INTO transactions (user_id, amount, type, category_id, date, description) 
+                    VALUES (?, ?, 'income', ?, ?, ?)
+                ");
+                if (!$user_income_stmt) {
+                    throw new Exception("Failed to prepare user income transaction");
+                }
+                $user_description = "Monthly Salary";
+                $user_income_stmt->bind_param("idiss", $user_id, $salary_amount, $salary_category_id, $salary_date, $user_description);
+                if (!$user_income_stmt->execute()) {
+                    throw new Exception("Failed to record user income");
+                }
+                $user_income_stmt->close();
+
+                // Update admin's total balance
+                $update_admin_balance = $conn->prepare("
+                    UPDATE users 
+                    SET total_balance = total_balance - ? 
+                    WHERE id = ?
+                ");
+                if ($update_admin_balance) {
+                    $update_admin_balance->bind_param("di", $salary_amount, $admin_id);
+                    $update_admin_balance->execute();
+                    $update_admin_balance->close();
+                }
+
+                // Update user's total balance
+                $update_user_balance = $conn->prepare("
+                    UPDATE users 
+                    SET total_balance = total_balance + ? 
+                    WHERE id = ?
+                ");
+                if ($update_user_balance) {
+                    $update_user_balance->bind_param("di", $salary_amount, $user_id);
+                    $update_user_balance->execute();
+                    $update_user_balance->close();
+                }
 
                 // Send notification to the user
                 $notif_message = "Your monthly salary of $" . number_format($salary_amount, 2) . " has been credited on " . date('F Y', strtotime($salary_date)) . ".";
