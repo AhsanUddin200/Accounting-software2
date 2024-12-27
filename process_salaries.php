@@ -40,7 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // Fetch all users with current_month_salary set
             $current_month = date('Y-m');
-            $stmt = $conn->prepare("SELECT id, username, current_month_salary FROM users WHERE current_month_salary > 0");
+            $stmt = $conn->prepare("
+                SELECT u.id, u.username, u.current_month_salary, u.balance 
+                FROM users u 
+                WHERE u.current_month_salary > 0
+            ");
             if (!$stmt) {
                 throw new Exception("Failed to prepare statement: " . $conn->error);
             }
@@ -96,10 +100,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $user_income_stmt->close();
 
-                // Update admin's total balance
+                // Update admin's balance
                 $update_admin_balance = $conn->prepare("
                     UPDATE users 
-                    SET total_balance = total_balance - ? 
+                    SET balance = balance - ? 
                     WHERE id = ?
                 ");
                 if ($update_admin_balance) {
@@ -108,10 +112,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $update_admin_balance->close();
                 }
 
-                // Update user's total balance
+                // Update user's balance
                 $update_user_balance = $conn->prepare("
                     UPDATE users 
-                    SET total_balance = total_balance + ? 
+                    SET balance = balance + ? 
                     WHERE id = ?
                 ");
                 if ($update_user_balance) {
