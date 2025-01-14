@@ -11,33 +11,51 @@ if ($_SESSION['role'] != 'admin') {
     exit();
 }
 
-// Calculate total income and expenses
-$income_query = "SELECT 
-    COALESCE(SUM(CASE 
-        WHEN type = 'income' THEN amount 
-        ELSE 0 
-    END), 0) as total_income,
-    COALESCE(SUM(CASE 
-        WHEN type = 'expense' THEN amount 
-        ELSE 0 
-    END), 0) as total_expenses
-FROM transactions 
-WHERE user_id = ?";
+// Set current month dates for the dashboard
+$period_start = date('Y-m-01'); // First day of current month
+$period_end = date('Y-m-t');    // Last day of current month
 
-$stmt = $conn->prepare($income_query);
-if ($stmt) {
-    $admin_id = $_SESSION['user_id'];
-    $stmt->bind_param("i", $admin_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    
-    $total_income = $row['total_income'];
-    $total_expenses = $row['total_expenses'];
-    $net_balance = $total_income - $total_expenses;
-    
-    $stmt->close();
-}
+// Get the current month's start and end dates
+$start_date = date('Y-m-01');
+$end_date = date('Y-m-t');
+
+// Income Total - where type is 'income'
+$income_query = "SELECT SUM(amount) as total_amount 
+    FROM transactions 
+    WHERE type = 'income'";
+$result = $conn->query($income_query);
+$income_total = $result->fetch_assoc()['total_amount'] ?? 0;
+
+// Expenses Total - where type is 'expense'
+$expense_query = "SELECT SUM(amount) as total_amount 
+    FROM transactions 
+    WHERE type = 'expense'";
+$result = $conn->query($expense_query);
+$expense_total = $result->fetch_assoc()['total_amount'] ?? 0;
+
+// Assets Total - where type is 'asset'
+$assets_query = "SELECT SUM(amount) as total_amount 
+    FROM transactions 
+    WHERE type = 'asset'";
+$result = $conn->query($assets_query);
+$assets_total = $result->fetch_assoc()['total_amount'] ?? 0;
+
+// Liabilities Total - where type is 'liability'
+$liabilities_query = "SELECT SUM(amount) as total_amount 
+    FROM transactions 
+    WHERE type = 'liability'";
+$result = $conn->query($liabilities_query);
+$liabilities_total = $result->fetch_assoc()['total_amount'] ?? 0;
+
+// Equities Total - where type is 'equity'
+$equities_query = "SELECT SUM(amount) as total_amount 
+    FROM transactions 
+    WHERE type = 'equity'";
+$result = $conn->query($equities_query);
+$equities_total = $result->fetch_assoc()['total_amount'] ?? 0;
+
+// Calculate Net Balance
+$net_balance = $income_total - $expense_total;
 
 // Fetch total number of users
 $user_count_result = $conn->query("SELECT COUNT(*) as total_users FROM users");
@@ -229,6 +247,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <a class="nav-link" href="manage_transactions.php">
                             <i class="fas fa-exchange-alt me-1"></i> Transactions
                         </a>
+                        
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="manage_categories.php">
@@ -241,8 +260,8 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="add_income.php">
-                            <i class="fas fa-file-alt me-1"></i> Add Income
+                        <a class="nav-link" href="add_transaction.php">
+                            <i class="fas fa-plus me-1"></i>  Add New Transaction
                         </a>
                     </li>
                     <li class="nav-item">
@@ -250,6 +269,11 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                             <i class="fas fa-money-bill-wave me-1"></i> Salaries
                         </a>
                     </li>
+                    <li class="nav-item">
+                    <a class="nav-link" href="view_ledgers.php">
+                        <i class="fas fa-book"></i> View Ledgers
+                    </a>
+                </li>
                     <li class="nav-item">
                         <a class="nav-link" href="upload_attendance.php">
                             <i class="fas fa-clock me-1"></i> Upload Attendance
@@ -277,41 +301,91 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
             </div>
         </div>
 
-        <!-- Stats Cards -->
+        <!-- Stats Cards with Period -->
+        <div class="period-header mb-3">
+            <h4>
+                <i class="fas fa-calendar me-2"></i>
+                Period: <?php echo date('d M Y', strtotime($period_start)) . " - " . date('d M Y', strtotime($period_end)); ?>
+            </h4>
+        </div>
+
         <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="dashboard-card stat-card">
+            <!-- Income Card -->
+            <div class="col-md-4 mb-3">
+                <div class="dashboard-card stat-card" 
+                     onclick="window.location='transaction_details.php?type=income'"
+                     style="cursor: pointer; background: linear-gradient(135deg, #27ae60, #2ecc71)">
                     <div class="stat-icon">
-                        <i class="fas fa-users"></i>
+                        <i class="fas fa-money-bill-wave"></i>
                     </div>
-                    <div class="stat-value"><?php echo number_format($user_count); ?></div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, var(--success-color), #2ecc71)">
-                    <div class="stat-icon">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <div class="stat-value">$<?php echo number_format($total_income, 2); ?></div>
+                    <div class="stat-value">PKR <?php echo number_format($income_total, 2); ?></div>
                     <div class="stat-label">Total Income</div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, var(--danger-color), #e74c3c)">
+
+            <!-- Expenses Card -->
+            <div class="col-md-4 mb-3">
+                <div class="dashboard-card stat-card" 
+                     onclick="window.location='transaction_details.php?type=expense'"
+                     style="cursor: pointer; background: linear-gradient(135deg, #e74c3c, #c0392b)">
                     <div class="stat-icon">
                         <i class="fas fa-shopping-cart"></i>
                     </div>
-                    <div class="stat-value">$<?php echo number_format($total_expenses, 2); ?></div>
+                    <div class="stat-value">PKR <?php echo number_format($expense_total, 2); ?></div>
                     <div class="stat-label">Total Expenses</div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, var(--info-color), #3498db)">
+
+            <!-- Assets Card -->
+            <div class="col-md-4 mb-3">
+                <div class="dashboard-card stat-card" 
+                     onclick="window.location='transaction_details.php?type=asset'"
+                     style="cursor: pointer; background: linear-gradient(135deg, #3498db, #2980b9)">
+                    <div class="stat-icon">
+                        <i class="fas fa-landmark"></i>
+                    </div>
+                    <div class="stat-value">PKR <?php echo number_format($assets_total, 2); ?></div>
+                    <div class="stat-label">Total Assets</div>
+                </div>
+            </div>
+
+            <!-- Liabilities Card -->
+        <!-- Liabilities Card -->
+<div class="col-md-4 mb-3">
+    <div class="dashboard-card stat-card" 
+         onclick="window.location='transaction_details.php?type=liability'"
+         style="cursor: pointer; background: linear-gradient(135deg, #9b59b6, #8e44ad)">
+        <div class="stat-icon">
+            <i class="fas fa-hand-holding-usd"></i>
+        </div>
+        <div class="stat-value">PKR <?php echo number_format($liabilities_total, 2); ?></div>
+        <div class="stat-label">Total Liabilities</div>
+    </div>
+</div>
+
+<!-- Equities Card -->
+<div class="col-md-4 mb-3">
+    <div class="dashboard-card stat-card" 
+         onclick="window.location='transaction_details.php?type=equity'"
+         style="cursor: pointer; background: linear-gradient(135deg, #f1c40f, #f39c12)">
+        <div class="stat-icon">
+            <i class="fas fa-chart-pie"></i>
+        </div>
+        <div class="stat-value">PKR <?php echo number_format($equities_total, 2); ?></div>
+        <div class="stat-label">Total Equities</div>
+    </div>
+</div>
+
+            <!-- Equities Card -->
+            
+
+            <!-- Net Balance Card -->
+            <div class="col-md-4 mb-3">
+                <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, #1abc9c, #16a085)">
                     <div class="stat-icon">
                         <i class="fas fa-balance-scale"></i>
                     </div>
-                    <div class="stat-value">$<?php echo number_format($net_balance, 2); ?></div>
+                    <div class="stat-value">PKR <?php echo number_format($net_balance, 2); ?></div>
                     <div class="stat-label">Net Balance</div>
                 </div>
             </div>
@@ -338,6 +412,9 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     </a>
                     <a href="financial_reports.php" class="quick-action-btn btn btn-warning">
                         <i class="fas fa-chart-bar me-2"></i>Financial Reports
+                    </a>
+                    <a href="accounting.php" class="quick-action-btn btn" style="background-color: #0066ff; color: white;">
+                        <i class="fas fa-book-open me-2"></i>Accounting
                     </a>
                 </div>
             </div>
@@ -395,7 +472,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                             <?php foreach ($recent_incomes as $income): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($income['description']); ?></td>
-                                <td>$<?php echo number_format($income['amount'], 2); ?></td>
+                                <td>PKR <?php echo number_format($income['amount'], 2); ?></td>
                                 <td><?php echo htmlspecialchars(date('M d, Y', strtotime($income['date']))); ?></td>
                             </tr>
                             <?php endforeach; ?>
@@ -445,7 +522,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                                 <span>Income to Expense Ratio</span>
                                 <span class="badge bg-info">
                                     <?php 
-                                    $ratio = $total_expenses > 0 ? ($total_income / $total_expenses) : 0;
+                                    $ratio = $expense_total > 0 ? ($income_total / $expense_total) : 0;
                                     echo number_format($ratio, 2);
                                     ?>
                                 </span>
@@ -459,7 +536,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                                 <span>Budget Utilization</span>
                                 <span class="badge bg-warning">
                                     <?php 
-                                    $utilization = $total_income > 0 ? ($total_expenses / $total_income * 100) : 0;
+                                    $utilization = $income_total > 0 ? ($expense_total / $income_total * 100) : 0;
                                     echo number_format($utilization, 1) . '%';
                                     ?>
                                 </span>
@@ -516,4 +593,4 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
         });
     </script>
 </body>
-</html>
+</html> 

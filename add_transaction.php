@@ -1,48 +1,206 @@
 <?php
-// add_transaction.php
-session_start(); // Ensure the session is started
-require 'db.php'; // Make sure this file connects to your database
+require_once 'session.php';
+require_once 'db.php';
 
-// Check if the user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php'); // Redirect to login page if not logged in
+// Check admin access
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header("Location: login.php");
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Using prepared statements for better security
-    $amount = $_POST['amount'];
-    $type = $_POST['type'];
-    $category_id = $_POST['category'];
-    $date = $_POST['date'];
-    $description = $_POST['description'];
-    $user_id = $_SESSION['user_id'];
+// Function to determine transaction type
+function getTransactionType($headName) {
+    if (in_array($headName, ['Assets', 'Expenses'])) {
+        return 'expense';
+    }
+    return 'income';
+}
 
-    // Validate inputs
-    if (empty($amount) || empty($type) || empty($category_id) || empty($date)) {
-        $error = "Please fill in all required fields.";
+// Function to generate voucher number
+function generateVoucherNumber($conn, $type) {
+    $prefix = ($type == 'expense') ? 'EXP' : 'INC';
+    $yearMonth = date('Ym');
+    
+    $query = "SELECT voucher_number 
+             FROM transactions 
+             WHERE voucher_number LIKE '$prefix$yearMonth%' 
+             ORDER BY voucher_number DESC 
+             LIMIT 1";
+    
+    $result = $conn->query($query);
+    
+    if ($result && $result->num_rows > 0) {
+        $lastNumber = $result->fetch_assoc()['voucher_number'];
+        $sequence = intval(substr($lastNumber, -4)) + 1;
     } else {
-        // Prepare the SQL statement
-        $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, category_id, date, description) VALUES (?, ?, ?, ?, ?, ?)");
-        if ($stmt) {
-            $stmt->bind_param("idsiss", $user_id, $amount, $type, $category_id, $date, $description);
-            if ($stmt->execute()) {
-                $success = "Transaction added successfully.";
-            } else {
-                $error = "Error: " . $stmt->error;
-            }
-            $stmt->close();
-        } else {
-            $error = "Error preparing statement: " . $conn->error;
-        }
+        $sequence = 1;
+    }
+    
+    return $prefix . $yearMonth . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+}
+
+// Function to get type from head
+function getTypeFromHead($head_id, $conn) {
+    $query = "SELECT name FROM accounting_heads WHERE id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $head_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $head = $result->fetch_assoc();
+    
+    // Convert head name to type
+    switch(strtolower($head['name'])) {
+        case 'assets':
+            return 'asset';
+        case 'liabilities':
+            return 'liability';
+        case 'equities':
+            return 'equity';
+        case 'income':
+            return 'income';
+        case 'expenses':
+            return 'expense';
+        default:
+            return 'other';
     }
 }
 
-// Fetch categories
-$cat_query = "SELECT * FROM categories ORDER BY name ASC";
-$cat_result = $conn->query($cat_query);
-if (!$cat_result) {
-    die("Error fetching categories: " . $conn->error);
+// Process form submission
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Get form data with proper validation
+    $debit_head_id = isset($_POST['debit_head_id']) ? intval($_POST['debit_head_id']) : 0;
+    $debit_category_id = isset($_POST['debit_category_id']) ? intval($_POST['debit_category_id']) : 0;
+    $debit_amount = isset($_POST['debit_amount']) ? floatval($_POST['debit_amount']) : 0;
+    $credit_head_id = isset($_POST['credit_head_id']) ? intval($_POST['credit_head_id']) : 0;
+    $credit_category_id = isset($_POST['credit_category_id']) ? intval($_POST['credit_category_id']) : 0;
+    $credit_amount = isset($_POST['credit_amount']) ? floatval($_POST['credit_amount']) : 0;
+    $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
+    $description = isset($_POST['description']) ? trim($_POST['description']) : '';
+    $user_id = $_SESSION['user_id'];
+
+    try {
+        // Start transaction
+        $conn->begin_transaction();
+
+        // Get head names
+        $head_query = "SELECT id, name FROM accounting_heads WHERE id IN (?, ?)";
+        $stmt = $conn->prepare($head_query);
+        $stmt->bind_param("ii", $debit_head_id, $credit_head_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $heads = [];
+        while($row = $result->fetch_assoc()) {
+            $heads[$row['id']] = $row['name'];
+        }
+
+        // Generate voucher number based on debit head
+        $transaction_type = getTransactionType($heads[$debit_head_id]);
+        $voucher_number = generateVoucherNumber($conn, $transaction_type);
+
+        // Insert debit transaction
+        $debit_sql = "INSERT INTO transactions (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt_debit = $conn->prepare($debit_sql);
+        if (!$stmt_debit) {
+            throw new Exception("Prepare failed for debit: " . $conn->error);
+        }
+
+        $debit_type = getTypeFromHead($debit_head_id, $conn);
+        $stmt_debit->bind_param("iiidssss", 
+            $user_id,
+            $debit_head_id,
+            $debit_category_id,
+            $debit_amount,
+            $debit_type,
+            $date,
+            $description,
+            $voucher_number
+        );
+
+        if (!$stmt_debit->execute()) {
+            throw new Exception("Error inserting debit: " . $stmt_debit->error);
+        }
+
+        // Insert credit transaction
+        $credit_sql = "INSERT INTO transactions (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt_credit = $conn->prepare($credit_sql);
+        if (!$stmt_credit) {
+            throw new Exception("Prepare failed for credit: " . $conn->error);
+        }
+
+        $credit_type = getTypeFromHead($credit_head_id, $conn);
+        $stmt_credit->bind_param("iiidssss", 
+            $user_id,
+            $credit_head_id,
+            $credit_category_id,
+            $credit_amount,
+            $credit_type,
+            $date,
+            $description,
+            $voucher_number
+        );
+
+        if (!$stmt_credit->execute()) {
+            throw new Exception("Error inserting credit: " . $stmt_credit->error);
+        }
+
+        // Commit transaction
+        $conn->commit();
+        
+        $_SESSION['success'] = "Transaction added successfully with voucher number: " . $voucher_number;
+        header("Location: accounting.php");
+        exit();
+
+    } catch (Exception $e) {
+        // Rollback and log error
+        $conn->rollback();
+        error_log("Transaction Error: " . $e->getMessage());
+        $_SESSION['error'] = "Error: " . $e->getMessage();
+        header("Location: add_transaction.php");
+        exit();
+    }
+}
+
+// Fetch accounting heads for the form
+$heads_query = "SELECT * FROM accounting_heads ORDER BY FIELD(name, 'Assets', 'Liabilities', 'Equities', 'Income', 'Expenses')";
+$heads = $conn->query($heads_query);
+
+function generateLedgerCode($head_id, $conn) {
+    // Get the head prefix (e.g., AS for Assets, EX for Expenses)
+    $prefix_query = "SELECT 
+        CASE 
+            WHEN name = 'Assets' THEN 'AS'
+            WHEN name = 'Liabilities' THEN 'LB'
+            WHEN name = 'Equities' THEN 'EQ'
+            WHEN name = 'Income' THEN 'IN'
+            WHEN name = 'Expenses' THEN 'EX'
+        END as prefix
+        FROM accounting_heads WHERE id = ?";
+    
+    $stmt = $conn->prepare($prefix_query);
+    $stmt->bind_param("i", $head_id);
+    $stmt->execute();
+    $prefix_result = $stmt->get_result();
+    $prefix = $prefix_result->fetch_assoc()['prefix'];
+
+    // Get the last number used for this prefix
+    $last_code_query = "SELECT ledger_code 
+                       FROM ledgers 
+                       WHERE ledger_code LIKE '$prefix%' 
+                       ORDER BY ledger_code DESC 
+                       LIMIT 1";
+    $result = $conn->query($last_code_query);
+    
+    if ($result->num_rows > 0) {
+        $last_code = $result->fetch_assoc()['ledger_code'];
+        $number = intval(substr($last_code, 2)) + 1;
+    } else {
+        $number = 1;
+    }
+
+    // Generate new code (e.g., AS0001)
+    return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
 }
 ?>
 
@@ -50,217 +208,158 @@ if (!$cat_result) {
 <html>
 <head>
     <title>Add Transaction</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3f37c9;
-            --success-color: #27AE60;
-            --danger-color: #C0392B;
-            --warning-color: #f72585;
-            --info-color: #4895ef;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
+        .form-select, .form-control {
+            margin-bottom: 20px;
         }
-
-        body {
-            background-color: #f5f6fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 0.5rem 0;
-            min-height: 60px;
-        }
-
-        .navbar-brand {
-            font-weight: 600;
-            color: white !important;
-            font-size: 1.1rem;
-        }
-
-        .nav-link {
-            color: rgba(255,255,255,0.9) !important;
-            transition: all 0.3s ease;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.9rem;
-        }
-
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            margin-bottom: 2rem;
-        }
-
-        .card-header {
-            background: var(--primary-color);
-            color: white;
-            border-radius: 15px 15px 0 0 !important;
-            padding: 1rem 1.5rem;
-            font-weight: 600;
-        }
-
-        .form-control, .form-select {
-            border-radius: 8px;
-            padding: 0.8rem 1rem;
-            border: 2px solid #e2e8f0;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-        }
-
-        .input-group-text {
-            background-color: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-right: none;
-        }
-
-        .btn-primary {
-            background: var(--primary-color);
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: var(--secondary-color);
-            transform: translateY(-1px);
-        }
-
-        .form-label {
-            font-weight: 500;
-            color: var(--dark-color);
-            margin-bottom: 0.5rem;
-        }
-
-        .required-field::after {
-            content: "*";
-            color: var(--danger-color);
-            margin-left: 4px;
-        }
-
-        .alert {
-            border-radius: 8px;
-            border: none;
-        }
-
-        .alert-success {
-            background-color: rgba(39, 174, 96, 0.1);
-            color: var(--success-color);
-        }
-
-        .alert-danger {
-            background-color: rgba(192, 57, 43, 0.1);
-            color: var(--danger-color);
+        textarea.form-control {
+            min-height: 120px;
         }
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-plus-circle me-2"></i>Add Transaction
-            </a>
-            <div class="ms-auto">
-                <a href="view_transactions.php" class="nav-link">
-                    <i class="fas fa-arrow-left me-1"></i> Back to Transactions
-                </a>
+    <?php include 'includes/navbar.php'; ?>
+
+    <div class="container py-4">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-plus-circle"></i> Add New Transaction</h4>
             </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-plus-circle me-2"></i>New Transaction Details
+            <div class="card-body">
+                <form method="POST" action="">
+                    <!-- Debit Section -->
+                    <div class="row mb-4">
+                        <h5>Debit Entry</h5>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Accounting Head</label>
+                                <select name="debit_head_id" id="debit_head_id" class="form-select" required>
+                                    <option value="">Select Head</option>
+                                    <?php foreach($heads as $head): ?>
+                                        <option value="<?php echo $head['id']; ?>">
+                                            <?php echo htmlspecialchars($head['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">    
+                                <label>Category</label>
+                                <select name="debit_category_id" id="debit_category_id" class="form-select" required>
+                                    <option value="">Select Head First</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" name="debit_amount" class="form-control" step="0.01" required>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body p-4">
-                        <?php if (isset($success)): ?>
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                <i class="fas fa-check-circle me-2"></i>
-                                <?php echo htmlspecialchars($success); ?>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        <?php endif; ?>
 
-                        <?php if (isset($error)): ?>
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <i class="fas fa-exclamation-circle me-2"></i>
-                                <?php echo htmlspecialchars($error); ?>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <!-- Credit Section -->
+                    <div class="row mb-4">
+                        <h5>Credit Entry</h5>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Accounting Head</label>
+                                <select name="credit_head_id" id="credit_head_id" class="form-select" required>
+                                    <option value="">Select Head</option>
+                                    <?php foreach($heads as $head): ?>
+                                        <option value="<?php echo $head['id']; ?>">
+                                            <?php echo htmlspecialchars($head['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
-                        <?php endif; ?>
-
-                        <form method="POST" action="add_transaction.php">
-                            <div class="mb-4">
-                                <label class="form-label required-field">Amount</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" class="form-control" name="amount" 
-                                           placeholder="Enter amount" required>
-                                </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">    
+                                <label>Category</label>
+                                <select name="credit_category_id" id="credit_category_id" class="form-select" required>
+                                    <option value="">Select Head First</option>
+                                </select>
                             </div>
-
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">Type</label>
-                                    <select class="form-select" name="type" required>
-                                        <option value="">Select Type</option>
-                                        <option value="income">Income</option>
-                                        <option value="expense">Expense</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label required-field">Category</label>
-                                    <select class="form-select" name="category" required>
-                                        <option value="">Select Category</option>
-                                        <?php while($row = $cat_result->fetch_assoc()): ?>
-                                            <option value="<?php echo $row['id']; ?>">
-                                                <?php echo htmlspecialchars($row['name']); ?>
-                                            </option>
-                                        <?php endwhile; ?>
-                                    </select>
-                                </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" name="credit_amount" class="form-control" step="0.01" required>
                             </div>
-
-                            <div class="mb-4">
-                                <label class="form-label required-field">Date</label>
-                                <input type="date" class="form-control" name="date" required>
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="form-label">Description</label>
-                                <textarea class="form-control" name="description" 
-                                        placeholder="Enter description" rows="3"></textarea>
-                            </div>
-
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i>Save Transaction
-                                </button>
-                                <a href="view_transactions.php" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-2"></i>Cancel
-                                </a>
-                            </div>
-                        </form>
+                        </div>
                     </div>
-                </div>
+
+                    <!-- Common Fields -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" name="date" class="form-control" required value="<?php echo date('Y-m-d'); ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea name="description" class="form-control" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Transaction
+                        </button>
+                        <a href="accounting.php" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // When debit accounting head changes
+            $('#debit_head_id').change(function() {
+                var head_id = $(this).val();
+                if (head_id) {
+                    $.ajax({
+                        url: 'get_categories.php',
+                        type: 'GET',
+                        data: { head_id: head_id },
+                        success: function(response) {
+                            $('#debit_category_id').html(response);
+                        }
+                    });
+                } else {
+                    $('#debit_category_id').html('<option value="">Select Head First</option>');
+                }
+            });
+
+            // When credit accounting head changes
+            $('#credit_head_id').change(function() {
+                var head_id = $(this).val();
+                if (head_id) {
+                    $.ajax({
+                        url: 'get_categories.php',
+                        type: 'GET',
+                        data: { head_id: head_id },
+                        success: function(response) {
+                            $('#credit_category_id').html(response);
+                        }
+                    });
+                } else {
+                    $('#credit_category_id').html('<option value="">Select Head First</option>');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
