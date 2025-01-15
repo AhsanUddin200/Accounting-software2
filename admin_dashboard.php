@@ -385,7 +385,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <div class="stat-icon">
                         <i class="fas fa-balance-scale"></i>
                     </div>
-                    <div class="stat-value">PK <?php echo number_format($net_balance, 2); ?></div>
+                    <div class="stat-value">PKR <?php echo number_format($net_balance, 2); ?></div>
                     <div class="stat-label">Net Balance</div>
                 </div>
             </div>
