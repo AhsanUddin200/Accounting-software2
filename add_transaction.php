@@ -65,6 +65,15 @@ function getTypeFromHead($head_id, $conn) {
     }
 }
 
+// Function to add a ledger entry
+function addLedgerEntry($conn, $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date) {
+    $stmt = $conn->prepare("INSERT INTO ledgers (transaction_id, ledger_code, account_type, debit, credit, description, date) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("issssss", $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date);
+    $stmt->execute();
+    $stmt->close();
+}
+
 // Process form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Get form data with proper validation
@@ -121,6 +130,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             throw new Exception("Error inserting debit: " . $stmt_debit->error);
         }
 
+        // Get the last inserted transaction ID
+        $transactionId = $stmt_debit->insert_id;
+
         // Insert credit transaction
         $credit_sql = "INSERT INTO transactions (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -144,6 +156,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!$stmt_credit->execute()) {
             throw new Exception("Error inserting credit: " . $stmt_credit->error);
         }
+
+        // Add corresponding ledger entries
+        $ledgerCodeDebit = generateLedgerCode($debit_head_id, $conn);
+        addLedgerEntry($conn, $transactionId, $ledgerCodeDebit, $debit_type, $debit_amount, 0, $description, $date);
+
+        $ledgerCodeCredit = generateLedgerCode($credit_head_id, $conn);
+        addLedgerEntry($conn, $transactionId, $ledgerCodeCredit, $credit_type, 0, $credit_amount, $description, $date);
 
         // Commit transaction
         $conn->commit();

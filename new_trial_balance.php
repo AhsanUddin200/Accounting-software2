@@ -1,4 +1,9 @@
 <?php
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Include session and database connection
 require_once 'session.php';
 require_once 'db.php';
 
@@ -16,25 +21,27 @@ $to_date = $_GET['to_date'] ?? date('Y-m-t');      // Last day of current month
 $query = "SELECT 
     ah.name as head_name,
     ac.name as category_name,
-    CASE 
-        WHEN SUM(l.debit - l.credit) > 0 THEN ABS(SUM(l.debit - l.credit))
+    MAX(l.account_type) as account_type,
+    SUM(CASE 
+        WHEN (l.debit - l.credit) > 0 
+        THEN (l.debit - l.credit)
         ELSE 0 
-    END as debit_balance,
-    CASE 
-        WHEN SUM(l.debit - l.credit) < 0 THEN ABS(SUM(l.debit - l.credit))
+    END) as debit_balance,
+    SUM(CASE 
+        WHEN (l.credit - l.debit) > 0 
+        THEN (l.credit - l.debit)
         ELSE 0 
-    END as credit_balance
+    END) as credit_balance
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
-    WHERE l.date <= ?
-    GROUP BY ah.id, ac.id
-    HAVING debit_balance > 0 OR credit_balance > 0
+    WHERE l.date BETWEEN ? AND ?
+    GROUP BY ah.name, ac.name
     ORDER BY ah.display_order, ac.name";
 
 $stmt = $conn->prepare($query);
-$stmt->bind_param("s", $to_date);
+$stmt->bind_param("ss", $from_date, $to_date);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -64,7 +71,6 @@ while ($row = $result->fetch_assoc()) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Navigation bar */
         .nav-bar {
             background-color: #0052cc;
             padding: 10px 20px;
@@ -86,28 +92,20 @@ while ($row = $result->fetch_assoc()) {
             padding: 6px 15px;
             border-radius: 4px;
         }
-
-        /* Main content */
         .main-content {
             padding: 20px;
         }
-        
-        /* Title */
         .page-title {
             font-size: 24px;
             margin-bottom: 20px;
             color: #333;
         }
-
-        /* Filter section */
         .filter-section {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 4px;
             margin-bottom: 20px;
         }
-        
-        /* Table styles */
         .table-section {
             background: white;
             border-radius: 4px;
@@ -127,7 +125,6 @@ while ($row = $result->fetch_assoc()) {
             font-weight: bold;
             background: #f8f9fa;
         }
-
         @media print {
             .no-print {
                 display: none;
