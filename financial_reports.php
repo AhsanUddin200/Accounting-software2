@@ -420,7 +420,7 @@ if ($_SESSION['role'] == 'admin') {
                 <div class="stats-card">
                     <div class="stats-label">Total Income</div>
                     <div class="stats-value income-text">
-                        $<?php echo number_format($income, 2); ?>
+                        PKR <?php echo number_format($income, 2); ?>
                     </div>
                 </div>
             </div>
@@ -428,7 +428,7 @@ if ($_SESSION['role'] == 'admin') {
                 <div class="stats-card">
                     <div class="stats-label">Total Expenses</div>
                     <div class="stats-value expense-text">
-                        $<?php echo number_format($expenses, 2); ?>
+                        PKR <?php echo number_format($expenses, 2); ?>
                     </div>
                 </div>
             </div>
@@ -436,7 +436,7 @@ if ($_SESSION['role'] == 'admin') {
                 <div class="stats-card">
                     <div class="stats-label">Net Balance</div>
                     <div class="stats-value balance-text">
-                        $<?php echo number_format($balance, 2); ?>
+                        PKR <?php echo number_format($balance, 2); ?>
                     </div>
                 </div>
             </div>
@@ -525,19 +525,19 @@ if ($_SESSION['role'] == 'admin') {
                         <div class="col-md-4">
                             <div class="stats-label">Total Income</div>
                             <div class="stats-value income-text">
-                                $<?php echo number_format($admin_income, 2); ?>
+                                PKR <?php echo number_format($admin_income, 2); ?>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stats-label">Total Expenses</div>
                             <div class="stats-value expense-text">
-                                $<?php echo number_format($admin_expenses, 2); ?>
+                                PKR <?php echo number_format($admin_expenses, 2); ?>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stats-label">Net Balance</div>
                             <div class="stats-value balance-text">
-                                $<?php echo number_format($admin_balance, 2); ?>
+                                PKR <?php echo number_format($admin_balance, 2); ?>
                             </div>
                         </div>
                     </div>
@@ -695,7 +695,7 @@ if ($_SESSION['role'] == 'admin') {
                         beginAtZero: true,
                         ticks: {
                             callback: function(value, index, values) {
-                                return '$' + value;
+                                return value;
                             }
                         }
                     }

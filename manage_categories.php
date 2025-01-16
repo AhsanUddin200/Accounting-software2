@@ -1,4 +1,4 @@
-<?php
+\<?php
 // manage_categories.php
 require 'session.php';
 require 'db.php';
@@ -25,10 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
         $error = "Invalid CSRF token.";
     } else {
         $name = trim($_POST['name']);
+        $main_head = intval($_POST['main_head']);
 
         // Basic validation
-        if (empty($name)) {
-            $error = "Category name is required.";
+        if (empty($name) || empty($main_head)) {
+            $error = "Category name and main head are required.";
         } else {
             // Check if category already exists
             $stmt = $conn->prepare("SELECT id FROM categories WHERE name = ?");
@@ -40,9 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
                     $error = "Category already exists.";
                 } else {
                     // Insert new category
-                    $stmt_insert = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
+                    $stmt_insert = $conn->prepare("INSERT INTO categories (name, main_head_id) VALUES (?, ?)");
                     if ($stmt_insert) {
-                        $stmt_insert->bind_param("s", $name);
+                        $stmt_insert->bind_param("si", $name, $main_head);
                         if ($stmt_insert->execute()) {
                             $success = "Category added successfully.";
                         } else {

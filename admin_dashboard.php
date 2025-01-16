@@ -249,11 +249,11 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         </a>
                         
                     </li>
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a class="nav-link" href="manage_categories.php">
                             <i class="fas fa-tags me-1"></i> Categories
                         </a>
-                    </li>
+                    </li> -->
                     <li class="nav-item">
                         <a class="nav-link" href="financial_reports.php">
                             <i class="fas fa-file-alt me-1"></i> Reports
