@@ -165,6 +165,16 @@ if (isset($_GET['category_id'])) {
                                 <option value="Expenses" <?php echo ($_GET['account_type'] ?? '') === 'Expenses' ? 'selected' : ''; ?>>Expenses</option>
                             </select>
                         </div>
+                          
+                        <div class="col-md-3">
+                            <label for="fromVoucher" class="form-label">From Voucher #</label>
+                            <input type="text" class="form-control" id="fromVoucher" name="fromVoucher" placeholder="e.g., INC202501001">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="toVoucher" class="form-label">To Voucher #</label>
+                            <input type="text" class="form-control" id="toVoucher" name="toVoucher" placeholder="e.g., INC202501999">
+                        </div>
+
 
                         <div class="col-md-12 d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary me-2">Apply Filters</button>

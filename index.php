@@ -234,9 +234,9 @@
         <div class="container">
             <div class="header">
                 <h1>Financial Management System</h1>
-                <button class="dashboard-btn" onclick="redirectToDashboard()">
-                    Access Dashboard
-                </button>
+                <button class="dashboard-btn" onclick="redirectToLogin()">
+    Access Dashboard
+</button>
             </div>
 
             <div class="features">
@@ -293,9 +293,10 @@
         </div>
 
         <script>
-            function redirectToDashboard() {
-                window.location.href = 'https://ahsan.rehan.school/Accountweb/admin_dashboard.php';
-            }
+             function redirectToLogin() {
+        // Redirect to login.php
+        window.location.href = "login.php";
+    }
         </script>
     </body>
     </html>

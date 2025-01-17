@@ -3,6 +3,17 @@ require_once 'session.php';
 require_once 'db.php';
 require_once 'functions.php';
 
+function getVoucherType($voucher_number) {
+    if (strpos($voucher_number, 'INC') === 0) {
+        return ['receipt-voucher', 'Receipt Voucher'];
+    } elseif (strpos($voucher_number, 'EXP') === 0) {
+        return ['payment-voucher', 'Payment Voucher'];
+    } elseif (strpos($voucher_number, 'JV') === 0) {
+        return ['journal-voucher', 'Journal Voucher'];
+    }
+    return ['unknown-voucher', 'Unknown Voucher Type'];
+}
+
 if (isset($_GET['voucher_number'])) {
     $voucher_number = $_GET['voucher_number'];
     
@@ -32,6 +43,8 @@ if (isset($_GET['voucher_number'])) {
     
     // Get first row for header details
     $header = $result->fetch_assoc();
+
+    list($voucher_type_class, $voucher_type_text) = getVoucherType($voucher_number);
 ?>
 
 <!DOCTYPE html>
@@ -81,9 +94,10 @@ if (isset($_GET['voucher_number'])) {
         /* Rest of your existing styles */
         .voucher-header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             position: relative;
             padding-top: 20px; /* Add some space for logo */
+            line-height: 1.2;
         }
         .details-table {
             width: 100%;
@@ -116,7 +130,33 @@ if (isset($_GET['voucher_number'])) {
         /* New style for QR code section at the bottom */
         .qr-section {
             text-align: center;
-            margin-top: 180px;
+            margin-top: 100px;
+        }
+
+        .voucher-type {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 500;
+            margin: 5px 0 10px 0;
+            font-size: 0.9em;
+        }
+
+        .receipt-voucher {
+            background-color: #48BB78;
+        }
+
+        .payment-voucher {
+            background-color: #ED8936;
+        }
+
+        .journal-voucher {
+            background-color: #4299E1;
+        }
+
+        .unknown-voucher {
+            background-color: #718096;
         }
     </style>
 </head>
@@ -132,6 +172,9 @@ if (isset($_GET['voucher_number'])) {
     <div class="voucher-header">
         <img src="https://dcassetcdn.com/design_img/682541/99243/99243_4267349_682541_image.jpg" class="header-logo" alt="School Logo">
         <h2>VOUCHER</h2>
+        <div class="voucher-type <?php echo $voucher_type_class; ?>">
+            <?php echo $voucher_type_text; ?>
+        </div>
         <p>Voucher #: <?php echo $voucher_number; ?></p>
         <p>Date: <?php echo date('d M Y', strtotime($header['date'])); ?></p>
         <p>Description: <?php echo htmlspecialchars($header['description']); ?></p>
