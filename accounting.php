@@ -52,6 +52,11 @@ if (!empty($_GET['to_date'])) {
     $query .= " AND t.date <= '" . $conn->real_escape_string($_GET['to_date']) . "'";
 }
 
+if (!empty($_GET['voucher_number'])) {
+    $query .= " AND t.voucher_number LIKE '%" . 
+              $conn->real_escape_string($_GET['voucher_number']) . "%'";
+}
+
 // Group by transaction ID to prevent duplicates
 $query .= " GROUP BY t.id ORDER BY t.date DESC, t.created_at DESC LIMIT 10";
 

@@ -188,6 +188,7 @@ if (isset($_GET['category_id'])) {
                                     <th class="text-end">DEBIT (PKR)</th>
                                     <th class="text-end">CREDIT (PKR)</th>
                                     <th class="text-end">BALANCE (PKR)</th>
+                                    <th>ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -215,6 +216,13 @@ if (isset($_GET['category_id'])) {
                                             <?php echo $row['credit'] ? formatCurrency($row['credit']) : '-'; ?>
                                         </td>
                                         <td class="text-end"><?php echo formatCurrency($running_balance); ?></td>
+                                        <td>
+                                            <a href="generate_voucher.php?voucher_number=<?php echo urlencode($row['voucher_number']); ?>" 
+                                               class="btn btn-sm btn-primary" 
+                                               target="_blank">
+                                                <i class="fas fa-file-alt"></i> View Voucher
+                                            </a>
+                                        </td>
                                     </tr>
                                 <?php endwhile; ?>
                             </tbody>
