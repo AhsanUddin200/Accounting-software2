@@ -21,23 +21,23 @@ $to_date = $_GET['to_date'] ?? date('Y-m-t');      // Last day of current month
 $query = "SELECT 
     ah.name as head_name,
     ac.name as category_name,
-    MAX(l.account_type) as account_type,
-    SUM(CASE 
-        WHEN (l.debit - l.credit) > 0 
-        THEN (l.debit - l.credit)
+    t.type as account_type,
+    SUM(l.debit) as total_debit,
+    SUM(l.credit) as total_credit,
+    CASE 
+        WHEN SUM(l.debit) > SUM(l.credit) THEN SUM(l.debit) - SUM(l.credit)
         ELSE 0 
-    END) as debit_balance,
-    SUM(CASE 
-        WHEN (l.credit - l.debit) > 0 
-        THEN (l.credit - l.debit)
+    END as debit_balance,
+    CASE 
+        WHEN SUM(l.credit) > SUM(l.debit) THEN SUM(l.credit) - SUM(l.debit)
         ELSE 0 
-    END) as credit_balance
+    END as credit_balance
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
     WHERE l.date BETWEEN ? AND ?
-    GROUP BY ah.name, ac.name
+    GROUP BY ah.name, ac.name, t.type
     ORDER BY ah.display_order, ac.name";
 
 $stmt = $conn->prepare($query);
@@ -60,6 +60,13 @@ while ($row = $result->fetch_assoc()) {
     $total_debit += $row['debit_balance'];
     $total_credit += $row['credit_balance'];
 }
+
+// Check if debits and credits are balanced
+$is_balanced = abs($total_debit - $total_credit) < 0.01; // Using 0.01 to handle floating point precision
+$difference = abs($total_debit - $total_credit);
+
+// Calculate net balance
+$net_balance = $total_debit - $total_credit;
 ?>
 
 <!DOCTYPE html>
@@ -133,6 +140,21 @@ while ($row = $result->fetch_assoc()) {
                 box-shadow: none;
             }
         }
+        .balance-alert {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .balance-alert.balanced {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .balance-alert.unbalanced {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -149,6 +171,18 @@ while ($row = $result->fetch_assoc()) {
     <!-- Main Content -->
     <div class="main-content">
         <h1 class="page-title">Trial Balance</h1>
+        
+        <!-- Balance Status Alert -->
+        <div class="balance-alert <?php echo $is_balanced ? 'balanced' : 'unbalanced'; ?>">
+            <?php if ($is_balanced): ?>
+                <i class="fas fa-check-circle me-2"></i>Trial Balance is properly balanced. Total Debits and Credits: PKR <?php echo number_format($total_debit, 2); ?>
+            <?php else: ?>
+                <i class="fas fa-exclamation-triangle me-2"></i>Warning: Trial Balance is not balanced!<br>
+                Total Debits: PKR <?php echo number_format($total_debit, 2); ?><br>
+                Total Credits: PKR <?php echo number_format($total_credit, 2); ?><br>
+                Net Difference: PKR <?php echo number_format($net_balance, 2); ?>
+            <?php endif; ?>
+        </div>
 
         <!-- Filter Section -->
         <div class="filter-section no-print">
@@ -186,12 +220,15 @@ while ($row = $result->fetch_assoc()) {
                         </tr>
                         <?php foreach ($categories as $row): ?>
                             <tr>
-                                <td class="ps-4"><?php echo htmlspecialchars($row['category_name']); ?></td>
-                                <td class="amount-column">
-                                    <?php echo $row['debit_balance'] ? number_format($row['debit_balance'], 2) : '-'; ?>
+                                <td class="ps-4">
+                                    <?php echo htmlspecialchars($row['category_name']); ?>
+                                    <small class="text-muted">(<?php echo htmlspecialchars($row['account_type']); ?>)</small>
                                 </td>
                                 <td class="amount-column">
-                                    <?php echo $row['credit_balance'] ? number_format($row['credit_balance'], 2) : '-'; ?>
+                                    <?php echo $row['debit_balance'] > 0 ? number_format($row['debit_balance'], 2) : '-'; ?>
+                                </td>
+                                <td class="amount-column">
+                                    <?php echo $row['credit_balance'] > 0 ? number_format($row['credit_balance'], 2) : '-'; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -203,6 +240,12 @@ while ($row = $result->fetch_assoc()) {
                         <td class="amount-column"><?php echo number_format($total_debit, 2); ?></td>
                         <td class="amount-column"><?php echo number_format($total_credit, 2); ?></td>
                     </tr>
+                    <?php if (!$is_balanced): ?>
+                    <tr class="total-row text-danger">
+                        <td>Net Difference</td>
+                        <td colspan="2" class="text-center">PKR <?php echo number_format($net_balance, 2); ?></td>
+                    </tr>
+                    <?php endif; ?>
                 </tfoot>
             </table>
         </div>

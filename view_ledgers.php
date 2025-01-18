@@ -18,6 +18,25 @@ $categories = $conn->query($categories_query);
 if (isset($_GET['category_id'])) {
     $category_id = intval($_GET['category_id']);
     
+    // First get the category and head info
+    $category_info_query = "SELECT 
+        ac.id as category_id,
+        ac.name as category_name,
+        ah.id as head_id,
+        ah.name as head_name
+        FROM account_categories ac
+        JOIN accounting_heads ah ON ac.head_id = ah.id
+        WHERE ac.id = ?";
+    
+    $cat_stmt = $conn->prepare($category_info_query);
+    $cat_stmt->bind_param("i", $category_id);
+    $cat_stmt->execute();
+    $category_info = $cat_stmt->get_result()->fetch_assoc();
+    
+    if (!$category_info) {
+        die("Invalid category selected");
+    }
+    
     $query = "SELECT 
         l.ledger_code,
         l.date,
@@ -105,13 +124,13 @@ if (isset($_GET['category_id'])) {
             </div>
 
         <!-- Individual Ledger View -->
-        <?php else: 
-            $category_info = $result->fetch_assoc();
-        ?>
+        <?php else: ?>
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="mb-0">Ledger Entries</h3>
+                <div>
+                    <h3 class="mb-0"><?php echo htmlspecialchars($category_info['head_name']); ?> - <?php echo htmlspecialchars($category_info['category_name']); ?></h3>
+                    <p class="text-muted mb-0">Ledger Entries</p>
+                </div>
                 <div class="btn-group gap-2">
-                  
                     <a href="view_ledgers.php" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Back to Ledgers
                     </a>

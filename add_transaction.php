@@ -10,15 +10,26 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 
 // Function to determine transaction type
 function getTransactionType($headName) {
-    if (in_array($headName, ['Assets', 'Expenses'])) {
-        return 'expense';
+    $headName = ucfirst(strtolower($headName));
+    switch($headName) {
+        case 'Assets':
+            return 'Asset';
+        case 'Liabilities':
+            return 'Liability';
+        case 'Equities':
+            return 'Equity';
+        case 'Income':
+            return 'Income';
+        case 'Expenses':
+            return 'Expense';
+        default:
+            return $headName;
     }
-    return 'income';
 }
 
 // Function to generate voucher number
-function generateVoucherNumber($conn, $type) {
-    $prefix = ($type == 'expense') ? 'EXP' : 'INC';
+function generateVoucherNumber($conn) {
+    $prefix = 'TRN';  // Using a generic transaction prefix
     $yearMonth = date('Ym');
     
     $query = "SELECT voucher_number 
@@ -47,29 +58,14 @@ function getTypeFromHead($head_id, $conn) {
     $stmt->execute();
     $result = $stmt->get_result();
     $head = $result->fetch_assoc();
-    
-    // Convert head name to type
-    switch(strtolower($head['name'])) {
-        case 'assets':
-            return 'asset';
-        case 'liabilities':
-            return 'liability';
-        case 'equities':
-            return 'equity';
-        case 'income':
-            return 'income';
-        case 'expenses':
-            return 'expense';
-        default:
-            return 'other';
-    }
+    return getTransactionType($head['name']);
 }
 
 // Function to add a ledger entry
 function addLedgerEntry($conn, $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date) {
     $stmt = $conn->prepare("INSERT INTO ledgers (transaction_id, ledger_code, account_type, debit, credit, description, date) 
                            VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("issssss", $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date);
+    $stmt->bind_param("issddss", $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date);
     $stmt->execute();
     $stmt->close();
 }
@@ -91,20 +87,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Start transaction
         $conn->begin_transaction();
 
+        // Validate categories belong to their respective heads
+        // ... existing validation code ...
+
         // Get head names
-        $head_query = "SELECT id, name FROM accounting_heads WHERE id IN (?, ?)";
+        $head_query = "SELECT ah.id, ah.name 
+                      FROM accounting_heads ah 
+                      WHERE ah.id IN (?, ?)";
         $stmt = $conn->prepare($head_query);
         $stmt->bind_param("ii", $debit_head_id, $credit_head_id);
         $stmt->execute();
         $result = $stmt->get_result();
         $heads = [];
         while($row = $result->fetch_assoc()) {
-            $heads[$row['id']] = $row['name'];
+            $heads[$row['id']] = $row;
         }
 
-        // Generate voucher number based on debit head
-        $transaction_type = getTransactionType($heads[$debit_head_id]);
-        $voucher_number = generateVoucherNumber($conn, $transaction_type);
+        // Generate voucher number
+        $voucher_number = generateVoucherNumber($conn);
 
         // Insert debit transaction
         $debit_sql = "INSERT INTO transactions (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             throw new Exception("Prepare failed for debit: " . $conn->error);
         }
 
-        $debit_type = getTypeFromHead($debit_head_id, $conn);
+        $debit_type = getTransactionType($heads[$debit_head_id]['name']);
         $stmt_debit->bind_param("iiidssss", 
             $user_id,
             $debit_head_id,
@@ -130,8 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             throw new Exception("Error inserting debit: " . $stmt_debit->error);
         }
 
-        // Get the last inserted transaction ID
-        $transactionId = $stmt_debit->insert_id;
+        $debit_transaction_id = $stmt_debit->insert_id;
 
         // Insert credit transaction
         $credit_sql = "INSERT INTO transactions (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
@@ -141,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             throw new Exception("Prepare failed for credit: " . $conn->error);
         }
 
-        $credit_type = getTypeFromHead($credit_head_id, $conn);
+        $credit_type = getTransactionType($heads[$credit_head_id]['name']);
         $stmt_credit->bind_param("iiidssss", 
             $user_id,
             $credit_head_id,
@@ -157,12 +156,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             throw new Exception("Error inserting credit: " . $stmt_credit->error);
         }
 
-        // Add corresponding ledger entries
+        $credit_transaction_id = $stmt_credit->insert_id;
+
+        // Add corresponding ledger entries with correct types
         $ledgerCodeDebit = generateLedgerCode($debit_head_id, $conn);
-        addLedgerEntry($conn, $transactionId, $ledgerCodeDebit, $debit_type, $debit_amount, 0, $description, $date);
+        addLedgerEntry($conn, $debit_transaction_id, $ledgerCodeDebit, $debit_type, $debit_amount, 0, $description, $date);
 
         $ledgerCodeCredit = generateLedgerCode($credit_head_id, $conn);
-        addLedgerEntry($conn, $transactionId, $ledgerCodeCredit, $credit_type, 0, $credit_amount, $description, $date);
+        addLedgerEntry($conn, $credit_transaction_id, $ledgerCodeCredit, $credit_type, 0, $credit_amount, $description, $date);
 
         // Commit transaction
         $conn->commit();
