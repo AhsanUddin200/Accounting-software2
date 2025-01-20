@@ -18,17 +18,15 @@ class IncomeStatement {
         $this->to_date = $to_date;
     }
 
-    private function getIncomeData() {
+    private function getRevenueData() {
         $query = "SELECT 
             ac.name as category_name,
-            SUM(CASE 
-                WHEN t.type IN ('income', 'liability', 'equity') THEN l.credit - l.debit
-                ELSE 0 
-            END) as balance
+            SUM(l.debit) as debit,
+            SUM(l.credit) as credit
             FROM transactions t
             JOIN ledgers l ON t.id = l.transaction_id
             JOIN account_categories ac ON t.category_id = ac.id
-            WHERE t.type IN ('income', 'liability', 'equity')
+            WHERE t.type = 'income'
             AND t.date BETWEEN ? AND ?
             GROUP BY ac.name
             ORDER BY ac.name";
@@ -39,17 +37,36 @@ class IncomeStatement {
         return $stmt->get_result();
     }
 
-    private function getExpenseData() {
+    private function getOperatingExpensesData() {
         $query = "SELECT 
             ac.name as category_name,
-            SUM(CASE 
-                WHEN t.type IN ('expense', 'asset') THEN l.debit - l.credit
-                ELSE 0 
-            END) as balance
+            SUM(l.debit) as debit,
+            SUM(l.credit) as credit
             FROM transactions t
             JOIN ledgers l ON t.id = l.transaction_id
             JOIN account_categories ac ON t.category_id = ac.id
-            WHERE t.type IN ('expense', 'asset')
+            WHERE t.type = 'expense' 
+            AND ac.name NOT IN ('Interest Expense', 'Depreciation', 'Tax Expense')
+            AND t.date BETWEEN ? AND ?
+            GROUP BY ac.name
+            ORDER BY ac.name";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("ss", $this->from_date, $this->to_date);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
+
+    private function getNonOperatingExpensesData() {
+        $query = "SELECT 
+            ac.name as category_name,
+            SUM(l.debit) as debit,
+            SUM(l.credit) as credit
+            FROM transactions t
+            JOIN ledgers l ON t.id = l.transaction_id
+            JOIN account_categories ac ON t.category_id = ac.id
+            WHERE t.type = 'expense'
+            AND ac.name IN ('Interest Expense', 'Depreciation', 'Tax Expense')
             AND t.date BETWEEN ? AND ?
             GROUP BY ac.name
             ORDER BY ac.name";
@@ -62,12 +79,10 @@ class IncomeStatement {
 
     public function getData() {
         try {
-            $income_data = $this->getIncomeData();
-            $expense_data = $this->getExpenseData();
-            
             return [
-                'income' => $income_data,
-                'expenses' => $expense_data,
+                'revenue' => $this->getRevenueData(),
+                'operating_expenses' => $this->getOperatingExpensesData(),
+                'non_operating_expenses' => $this->getNonOperatingExpensesData(),
                 'from_date' => $this->from_date,
                 'to_date' => $this->to_date
             ];
@@ -94,187 +109,502 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
 
         .statement-card {
-            background: white;
+            background: var(--card-background);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+                       0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .statement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 
+                       0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .date-range {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .filter-section {
+            background: #f1f5f9;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            align-items: end;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .table-section {
+            margin-bottom: 2rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table th {
+            background-color: #f8fafc;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table tr:hover {
+            background-color: #f8fafc;
         }
 
         .amount {
-            font-family: 'Monaco', monospace;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+        }
+
+        .total-row {
+            font-weight: 600;
+            background-color: #f8fafc;
+        }
+
+        .profit {
+            color: var(--success-color);
+        }
+
+        .loss {
+            color: var(--danger-color);
+        }
+
+        .summary-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-title {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
         }
 
         @media print {
-            .no-print { display: none; }
-            body { background-color: white; }
+            body {
+                background: white;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
             .statement-card {
                 box-shadow: none;
-                border: 1px solid #e5e7eb;
+                margin: 0;
+                padding: 0;
+            }
+
+            .table {
+                page-break-inside: auto;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            .summary-section {
+                page-break-inside: avoid;
             }
         }
 
-        .hover-row:hover {
-            background-color: #f9fafb;
-        }
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2rem;
+            }
 
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-in;
-        }
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+            .btn {
+                width: 100%;
+            }
 
-        .back-button {
-            transition: transform 0.2s ease;
-        }
-
-        .back-button:hover {
-            transform: translateX(-3px);
+            .summary-section {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
-<body class="min-h-screen py-8">
-    <div class="container mx-auto px-4 max-w-5xl">
+<body class="min-h-screen py-12">
+    <div class="container">
         <!-- Back Button -->
-        <div class="mb-6 no-print">
-            <a href="financial_reports.php" class="inline-flex items-center text-gray-700 hover:text-gray-900 back-button">
-                <i class="fas fa-arrow-left mr-2"></i>
-                <span class="font-medium">Back to Reports</span>
+        <div class="mb-8 no-print">
+            <a href="financial_reports.php" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Reports</span>
             </a>
         </div>
 
-        <!-- Header -->
-        <div class="text-center mb-8 animate-fade-in">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Income Statement</h1>
-            <p class="text-gray-600">
+        <!-- Header Section -->
+        <div class="header-section">
+            <h1 class="page-title">Income Statement</h1>
+            <p class="date-range">
                 <?php echo date('F d, Y', strtotime($data['from_date'])); ?> - 
                 <?php echo date('F d, Y', strtotime($data['to_date'])); ?>
             </p>
         </div>
 
-        <!-- Filter Form -->
-        <div class="statement-card p-6 mb-6 no-print animate-fade-in">
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
-                    <input type="date" name="from_date" 
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        value="<?php echo $data['from_date']; ?>">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
-                    <input type="date" name="to_date" 
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        value="<?php echo $data['to_date']; ?>">
-                </div>
-                <div class="flex gap-2">
-                    <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-filter mr-2"></i>Apply Filter
-                    </button>
-                    <button type="button" onclick="window.print()" 
-                        class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
-                        <i class="fas fa-print mr-2"></i>Print
-                    </button>
-                </div>
-            </form>
+        <!-- Filter Section -->
+        <div class="statement-card no-print">
+            <div class="card-header">
+                <h2 class="text-xl font-semibold">Filter Options</h2>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="filter-grid">
+                    <div class="form-group">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="from_date" 
+                            class="form-control"
+                            value="<?php echo $data['from_date']; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="to_date" 
+                            class="form-control"
+                            value="<?php echo $data['to_date']; ?>">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary w-full mb-2">
+                            <i class="fas fa-filter"></i>
+                            <span>Apply Filter</span>
+                        </button>
+                        <button type="button" onclick="window.print()" class="btn btn-secondary w-full">
+                            <i class="fas fa-print"></i>
+                            <span>Print Report</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <!-- Statement Content -->
-        <div class="statement-card p-6 animate-fade-in">
-            <!-- Income Section -->
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-arrow-down text-green-500 mr-2"></i>Income, Liabilities & Equity 
-                </h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr>
-                                <th>Particulars</th>
-                                <th class="text-end">Amount (PKR)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Income Section -->
-                            <tr class="table-light">
-                                <td colspan="2"><strong>Income, Liabilities & Equity</strong></td>
-                            </tr>
-                            <?php 
-                            $total_income = 0;
-                            while ($row = $data['income']->fetch_assoc()): 
-                                if ($row['balance'] != 0) {
-                                    $total_income += $row['balance'];
-                            ?>
+        <!-- Main Content -->
+        <div class="statement-card">
+            <!-- Revenue Section -->
+            <div class="table-section">
+                <div class="card-header">
+                    <h2 class="text-xl font-semibold">Revenue</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($row['category_name']); ?></td>
-                                    <td class="text-end">
-                                        <?php echo number_format(abs($row['balance']), 2); ?>
-                                        <?php echo ($row['balance'] < 0) ? ' debit' : ' credit'; ?>
+                                    <th>Category</th>
+                                    <th class="text-right">Amount (PKR)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $total_revenue = 0;
+                                while ($row = $data['revenue']->fetch_assoc()): 
+                                    $balance = $row['credit'] - $row['debit'];
+                                    $total_revenue += $balance;
+                                ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                                        <td class="amount">
+                                            <?php echo number_format(abs($balance), 2); ?>
+                                            <span class="text-sm ml-1">
+                                                <?php echo ($balance < 0) ? 'Dr' : 'Cr'; ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <?php endwhile; ?>
+                                <tr class="total-row">
+                                    <td>Total Revenue</td>
+                                    <td class="amount <?php echo $total_revenue >= 0 ? 'profit' : 'loss'; ?>">
+                                        <?php echo number_format(abs($total_revenue), 2); ?>
+                                        <span class="text-sm ml-1">
+                                            <?php echo ($total_revenue < 0) ? 'Dr' : 'Cr'; ?>
+                                        </span>
                                     </td>
                                 </tr>
-                            <?php 
-                                }
-                            endwhile; 
-                            ?>
-                            <tr class="fw-bold">
-                                <td>Total Income</td>
-                                <td class="text-end">
-                                    <?php echo number_format(abs($total_income), 2); ?>
-                                    <?php echo ($total_income < 0) ? ' debit' : ' credit'; ?>
-                                </td>
-                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-                            <!-- Expenses Section -->
-                            <tr class="table-light">
-                                <td colspan="2"><strong>Expenses & Assets</strong></td>
-                            </tr>
-                            <?php 
-                            $total_expenses = 0;
-                            while ($row = $data['expenses']->fetch_assoc()): 
-                                if ($row['balance'] != 0) {
-                                    $total_expenses += $row['balance'];
-                            ?>
+            <!-- Operating Expenses Section -->
+            <div class="table-section">
+                <div class="card-header">
+                    <h2 class="text-xl font-semibold">Operating Expenses</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($row['category_name']); ?></td>
-                                    <td class="text-end">
-                                        <?php echo number_format(abs($row['balance']), 2); ?>
-                                        <?php echo ($row['balance'] < 0) ? ' credit' : ' debit'; ?>
+                                    <th>Category</th>
+                                    <th class="text-right">Amount (PKR)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $total_operating_expenses = 0;
+                                while ($row = $data['operating_expenses']->fetch_assoc()): 
+                                    $balance = $row['debit'] - $row['credit'];
+                                    $total_operating_expenses += $balance;
+                                ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                                        <td class="amount">
+                                            <?php echo number_format(abs($balance), 2); ?>
+                                            <span class="text-sm ml-1">
+                                                <?php echo ($balance < 0) ? 'Cr' : 'Dr'; ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                                <tr class="total-row">
+                                    <td>Total Operating Expenses</td>
+                                    <td class="amount">
+                                        <?php echo number_format(abs($total_operating_expenses), 2); ?>
+                                        <span class="text-sm ml-1">
+                                            <?php echo ($total_operating_expenses < 0) ? 'Cr' : 'Dr'; ?>
+                                        </span>
                                     </td>
                                 </tr>
-                            <?php 
-                                }
-                            endwhile; 
-                            ?>
-                            <tr class="fw-bold">
-                                <td>Total Expenses</td>
-                                <td class="text-end">
-                                    <?php echo number_format(abs($total_expenses), 2); ?>
-                                    <?php echo ($total_expenses < 0) ? ' credit' : ' debit'; ?>
-                                </td>
-                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-                            <!-- Net Profit/Loss -->
-                            <tr class="table-success fw-bold">
-                                <td>Net Profit</td>
-                                <td class="text-end">
-                                    <?php 
-                                    $net_profit = $total_income - $total_expenses;
-                                    echo number_format(abs($net_profit), 2);
-                                    echo ($net_profit < 0) ? ' debit' : ' credit';
-                                    ?>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Non-Operating Expenses Section -->
+            <div class="table-section">
+                <div class="card-header">
+                    <h2 class="text-xl font-semibold">Non-Operating Expenses</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-right">Amount (PKR)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $total_non_operating_expenses = 0;
+                                while ($row = $data['non_operating_expenses']->fetch_assoc()): 
+                                    $balance = $row['debit'] - $row['credit'];
+                                    $total_non_operating_expenses += $balance;
+                                ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                                        <td class="amount">
+                                            <?php echo number_format(abs($balance), 2); ?>
+                                            <span class="text-sm ml-1">
+                                                <?php echo ($balance < 0) ? 'Cr' : 'Dr'; ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                                <tr class="total-row">
+                                    <td>Total Non-Operating Expenses</td>
+                                    <td class="amount">
+                                        <?php echo number_format(abs($total_non_operating_expenses), 2); ?>
+                                        <span class="text-sm ml-1">
+                                            <?php echo ($total_non_operating_expenses < 0) ? 'Cr' : 'Dr'; ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Section -->
+            <div class="card-body">
+                <div class="summary-section">
+                    <!-- Gross Profit -->
+                    <div class="summary-card">
+                        <h3 class="summary-title">Gross Profit</h3>
+                        <?php $gross_profit = $total_revenue - $total_operating_expenses; ?>
+                        <p class="summary-value <?php echo $gross_profit >= 0 ? 'profit' : 'loss'; ?>">
+                            <?php echo number_format(abs($gross_profit), 2); ?>
+                            <span class="text-sm ml-1">
+                                <?php echo ($gross_profit < 0) ? 'Dr' : 'Cr'; ?>
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- Total Expenses -->
+                    <div class="summary-card">
+                        <h3 class="summary-title">Total Expenses</h3>
+                        <?php $total_expenses = $total_operating_expenses + $total_non_operating_expenses; ?>
+                        <p class="summary-value">
+                            <?php echo number_format(abs($total_expenses), 2); ?>
+                            <span class="text-sm ml-1">Dr</span>
+                        </p>
+                    </div>
+
+                    <!-- Net Income -->
+                    <div class="summary-card">
+                        <h3 class="summary-title">Net Income</h3>
+                        <?php $net_income = $gross_profit - $total_non_operating_expenses; ?>
+                        <p class="summary-value <?php echo $net_income >= 0 ? 'profit' : 'loss'; ?>">
+                            <?php echo number_format(abs($net_income), 2); ?>
+                            <span class="text-sm ml-1">
+                                <?php echo ($net_income < 0) ? 'Dr' : 'Cr'; ?>
+                            </span>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -282,21 +612,34 @@ try {
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Add subtle animation when switching between date ranges
+        // Add smooth transitions for filter changes
         const form = document.querySelector('form');
         form.addEventListener('submit', function() {
-            document.querySelectorAll('.animate-fade-in').forEach(el => {
-                el.style.opacity = 0;
-            });
+            document.querySelector('.statement-card').style.opacity = '0.5';
         });
 
-        // Format numbers with commas as they're typed
+        // Format numbers with animations
         document.querySelectorAll('.amount').forEach(el => {
             const value = parseFloat(el.textContent.replace(/,/g, ''));
             el.textContent = value.toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
+        });
+
+        // Add hover effects for table rows
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = '#f8fafc';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = '';
+            });
+        });
+
+        // Print functionality
+        document.querySelector('.btn-secondary').addEventListener('click', function() {
+            window.print();
         });
     });
     </script>
