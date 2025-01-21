@@ -28,19 +28,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
 
-                // Update 'monthly_salary' and 'current_month_salary' in 'users' table
-                $stmt_user = $conn->prepare("UPDATE users SET monthly_salary = ?, current_month_salary = ? WHERE id = ?");
-                if ($stmt_user) {
+                // Begin transaction
+                $conn->begin_transaction();
+
+                try {
+                    // Update 'monthly_salary' and 'current_month_salary' in 'users' table
+                    $stmt_user = $conn->prepare("UPDATE users SET monthly_salary = ?, current_month_salary = ? WHERE id = ?");
                     $stmt_user->bind_param("ddi", $monthly_salary, $current_month_salary, $user_id);
-                    if ($stmt_user->execute()) {
-                        log_action($conn, $_SESSION['user_id'], 'Updated Salary', "Updated monthly salary to $$monthly_salary and current month salary to $$current_month_salary for User ID: $user_id.");
-                        $successes[] = "Salaries updated for User ID: $user_id.";
-                    } else {
-                        $errors[] = "Failed to update salaries for User ID: $user_id.";
-                    }
+                    $stmt_user->execute();
                     $stmt_user->close();
-                } else {
-                    $errors[] = "Database error: Unable to prepare statement for User ID: $user_id.";
+
+                    // Insert into salaries table
+                    $stmt_salary = $conn->prepare("INSERT INTO salaries (user_id, monthly_salary, current_month_salary, payment_date) VALUES (?, ?, ?, CURRENT_DATE())");
+                    $stmt_salary->bind_param("idd", $user_id, $monthly_salary, $current_month_salary);
+                    $stmt_salary->execute();
+                    $stmt_salary->close();
+
+                    // Log the action
+                    log_action($conn, $_SESSION['user_id'], 'Updated Salary', "Updated monthly salary to $$monthly_salary and current month salary to $$current_month_salary for User ID: $user_id.");
+                    
+                    // Commit transaction
+                    $conn->commit();
+                    $successes[] = "Salaries updated for User ID: $user_id.";
+
+                } catch (Exception $e) {
+                    // Rollback transaction on error
+                    $conn->rollback();
+                    $errors[] = "Failed to update salaries for User ID: $user_id. Error: " . $e->getMessage();
                 }
             }
         }
@@ -323,10 +337,6 @@ if (empty($_SESSION['csrf_token'])) {
                             <tbody>
                                 <?php if (count($users) > 0): ?>
                                     <?php foreach ($users as $user): ?>
-                                        <?php
-                                            // Fetch current month's salary from 'users' table
-                                            $current_month_salary = $user['current_month_salary'];
-                                        ?>
                                         <tr>
                                             <td class="px-4">#<?php echo htmlspecialchars($user['id']); ?></td>
                                             <td>
@@ -338,16 +348,24 @@ if (empty($_SESSION['csrf_token'])) {
                                                 </div>
                                             </td>
                                             <td class="text-end">
-                                                <?php echo number_format($user['monthly_salary'], 0); ?> <!-- Display without decimals -->
+                                                <?php echo number_format($user['monthly_salary'], 0); ?>
                                             </td>
                                             <td class="text-end px-4">
-                                                <input type="number" 
-                                                       step="0.01" 
-                                                       min="0" 
-                                                       name="salaries[<?php echo $user['id']; ?>][monthly_salary]" 
-                                                       class="form-control salary-input text-end" 
-                                                       value="<?php echo htmlspecialchars($user['monthly_salary']); ?>" 
-                                                       required>
+                                                <div class="d-flex align-items-center justify-content-end gap-2">
+                                                    <input type="number" 
+                                                           step="0.01" 
+                                                           min="0" 
+                                                           name="salaries[<?php echo $user['id']; ?>][monthly_salary]" 
+                                                           class="form-control salary-input text-end" 
+                                                           value="<?php echo htmlspecialchars($user['monthly_salary']); ?>" 
+                                                           required>
+                                                    <a href="generate_payslip.php?user_id=<?php echo $user['id']; ?>" 
+                                                       class="btn btn-sm btn-outline-primary" 
+                                                       target="_blank" 
+                                                       title="Generate Payslip">
+                                                        <i class="fas fa-file-invoice"></i>
+                                                    </a>
+                                                </div>
                                             </td>
                                             <td class="text-end px-4">
                                                 <input type="number" 
@@ -355,7 +373,7 @@ if (empty($_SESSION['csrf_token'])) {
                                                        min="0" 
                                                        name="salaries[<?php echo $user['id']; ?>][current_month_salary]" 
                                                        class="form-control salary-input text-end" 
-                                                       value="<?php echo htmlspecialchars($current_month_salary); ?>" 
+                                                       value="<?php echo htmlspecialchars($user['current_month_salary']); ?>" 
                                                        required>
                                             </td>
                                         </tr>

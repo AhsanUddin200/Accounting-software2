@@ -4,14 +4,63 @@ require_once 'db.php';
 require_once 'functions.php';
 
 function getVoucherType($voucher_number) {
-    if (strpos($voucher_number, 'INC') === 0) {
-        return ['receipt-voucher', 'Receipt Voucher'];
-    } elseif (strpos($voucher_number, 'EXP') === 0) {
-        return ['payment-voucher', 'Payment Voucher'];
-    } elseif (strpos($voucher_number, 'JV') === 0) {
-        return ['journal-voucher', 'Journal Voucher'];
+    global $conn;
+    
+    // Get the transaction details for this voucher
+    $query = "SELECT l.debit, l.credit, ah.name as head_name 
+              FROM transactions t
+              JOIN ledgers l ON t.id = l.transaction_id
+              JOIN accounting_heads ah ON t.head_id = ah.id
+              WHERE t.voucher_number = ?";
+              
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $voucher_number);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $has_income = false;
+    $has_expense = false;
+    
+    while ($row = $result->fetch_assoc()) {
+        // Check for income transactions (credit in income accounts)
+        if (stripos($row['head_name'], 'income') !== false || 
+            stripos($row['head_name'], 'fees') !== false || 
+            stripos($row['head_name'], 'revenue') !== false) {
+            if ($row['credit'] > 0) {
+                $has_income = true;
+            }
+        }
+        
+        // Check for expense transactions (debit in expense accounts)
+        if (stripos($row['head_name'], 'expense') !== false || 
+            stripos($row['head_name'], 'payment') !== false || 
+            stripos($row['head_name'], 'cost') !== false) {
+            if ($row['debit'] > 0) {
+                $has_expense = true;
+            }
+        }
     }
-    return ['unknown-voucher', 'Unknown Voucher Type'];
+    
+    // Determine voucher type based on transaction nature
+    if ($has_income && !$has_expense) {
+        return [
+            'receipt-voucher',
+            'Income Voucher',
+            'Used for recording income transactions such as student fees and other receipts'
+        ];
+    } elseif ($has_expense && !$has_income) {
+        return [
+            'payment-voucher',
+            'Payment Voucher',
+            'Used for recording payments to suppliers, creditors, and other expenses'
+        ];
+    } else {
+        return [
+            'journal-voucher',
+            'Journal Voucher',
+            'Used for recording general transactions that don\'t involve direct cash payments or receipts'
+        ];
+    }
 }
 
 if (isset($_GET['voucher_number'])) {
@@ -44,7 +93,7 @@ if (isset($_GET['voucher_number'])) {
     // Get first row for header details
     $header = $result->fetch_assoc();
 
-    list($voucher_type_class, $voucher_type_text) = getVoucherType($voucher_number);
+    list($voucher_type_class, $voucher_type_text, $voucher_type_description) = getVoucherType($voucher_number);
 ?>
 
 <!DOCTYPE html>
