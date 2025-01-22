@@ -275,10 +275,10 @@ if (empty($_SESSION['csrf_token'])) {
                 <div class="stats-card">
                     <h6 class="text-muted mb-2">Total Monthly Payroll</h6>
                     <h3 class="mb-0">
-                        <i class="fas fa-dollar-sign text-success me-2"></i>
+                    <i class="fas fa-rupee-sign text-success me-2"></i>
                         <?php 
                             $total_payroll = array_sum(array_column($users, 'monthly_salary'));
-                            echo number_format($total_payroll, 0); // Display without decimals
+                            echo number_format($total_payroll, 0) . ' PKR';
                         ?>
                     </h3>
                 </div>

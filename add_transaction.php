@@ -76,11 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $debit_head_ids = $_POST['debit_head_id'] ?? [];
     $debit_category_ids = $_POST['debit_category_id'] ?? [];
     $debit_amounts = $_POST['debit_amount'] ?? [];
+    $debit_description = $_POST['debit_description'] ?? [];
     $credit_head_ids = $_POST['credit_head_id'] ?? [];
     $credit_category_ids = $_POST['credit_category_id'] ?? [];
     $credit_amounts = $_POST['credit_amount'] ?? [];
+    $credit_description = $_POST['credit_description'] ?? [];
     $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
-    $description = isset($_POST['description']) ? trim($_POST['description']) : '';
     $user_id = $_SESSION['user_id'];
 
     try {
@@ -116,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $debit_amounts[$i],
                 $debit_type,
                 $date,
-                $description,
+                $debit_description[$i],
                 $voucher_number
             );
             
@@ -129,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             // Add ledger entry for debit
             $ledgerCodeDebit = generateLedgerCode($debit_head_ids[$i], $conn);
-            addLedgerEntry($conn, $debit_transaction_id, $ledgerCodeDebit, $debit_type, $debit_amounts[$i], 0, $description, $date);
+            addLedgerEntry($conn, $debit_transaction_id, $ledgerCodeDebit, $debit_type, $debit_amounts[$i], 0, $debit_description[$i], $date);
         }
 
         // Process all credit entries
@@ -149,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $credit_amounts[$i],
                 $credit_type,
                 $date,
-                $description,
+                $credit_description[$i],
                 $voucher_number
             );
             
@@ -162,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             // Add ledger entry for credit
             $ledgerCodeCredit = generateLedgerCode($credit_head_ids[$i], $conn);
-            addLedgerEntry($conn, $credit_transaction_id, $ledgerCodeCredit, $credit_type, 0, $credit_amounts[$i], $description, $date);
+            addLedgerEntry($conn, $credit_transaction_id, $ledgerCodeCredit, $credit_type, 0, $credit_amounts[$i], $credit_description[$i], $date);
         }
 
         // Commit transaction
@@ -281,6 +282,12 @@ function generateLedgerCode($head_id, $conn) {
                                         <input type="number" name="debit_amount[]" class="form-control debit-amount" step="0.01" required>
                                     </div>
                                 </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <input type="text" name="debit_description[]" class="form-control" required>
+                                    </div>
+                                </div>
                                 <div class="col-md-2 d-flex align-items-end">
                                     <button type="button" class="btn btn-danger remove-entry mb-3"><i class="fas fa-minus"></i></button>
                                 </div>
@@ -322,6 +329,12 @@ function generateLedgerCode($head_id, $conn) {
                                     <div class="form-group">
                                         <label>Amount</label>
                                         <input type="number" name="credit_amount[]" class="form-control credit-amount" step="0.01" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <input type="text" name="credit_description[]" class="form-control" required>
                                     </div>
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end">
