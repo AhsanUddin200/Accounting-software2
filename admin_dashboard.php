@@ -150,7 +150,93 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
             padding: 1.5rem;
             border-radius: 15px;
             color: white;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            z-index: 1;
+            height: 200px;
+            cursor: pointer;
+        }
+
+        /* 3D Flip Effect */
+        .stat-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .stat-card:hover .stat-card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .stat-card-front, .stat-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stat-card-back {
+            transform: rotateY(180deg);
+            background: inherit;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Sparkle Effect */
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.1) 45%,
+                rgba(255, 255, 255, 0.5) 50%,
+                rgba(255, 255, 255, 0.1) 55%,
+                transparent 100%
+            );
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+            z-index: -1;
+        }
+
+        .stat-card:hover::after {
+            opacity: 1;
+            animation: sparkle 1s ease-in-out;
+        }
+
+        @keyframes sparkle {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        /* Back side styling */
+        .stat-card-back h4 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .stat-card-back p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+
+        .stat-card-back i {
+            margin-right: 5px;
+            width: 20px;
+            text-align: center;
         }
 
         .stat-icon {
@@ -313,80 +399,137 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
             <!-- Income Card -->
             <div class="col-md-4 mb-3">
                 <div class="dashboard-card stat-card" 
-                     onclick="window.location='transaction_details.php?type=income'"
-                     style="cursor: pointer; background: linear-gradient(135deg, #27ae60, #2ecc71)">
-                    <div class="stat-icon">
-                        <i class="fas fa-money-bill-wave"></i>
+                     onclick="handleCardClick(this, 'transaction_details.php?type=income')"
+                     style="background: linear-gradient(135deg, #27ae60, #2ecc71)">
+                    <div class="stat-card-inner">
+                        <div class="stat-card-front">
+                            <div class="stat-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <div class="stat-value">PKR <?php echo number_format($income_total, 2); ?></div>
+                            <div class="stat-label">Total Income</div>
+                        </div>
+                        <div class="stat-card-back">
+                            <h4>Income Analysis</h4>
+                          
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($income_total * 12, 2); ?></p>
+                            <p><i class="fas fa-chart-bar"></i> Avg Monthly: PKR <?php echo number_format($income_total / 12, 2); ?></p>
+                            <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
+                        </div>
                     </div>
-                    <div class="stat-value">PKR <?php echo number_format($income_total, 2); ?></div>
-                    <div class="stat-label">Total Income</div>
                 </div>
             </div>
 
             <!-- Expenses Card -->
             <div class="col-md-4 mb-3">
                 <div class="dashboard-card stat-card" 
-                     onclick="window.location='transaction_details.php?type=expense'"
-                     style="cursor: pointer; background: linear-gradient(135deg, #e74c3c, #c0392b)">
-                    <div class="stat-icon">
-                        <i class="fas fa-shopping-cart"></i>
+                     onclick="handleCardClick(this, 'transaction_details.php?type=expense')"
+                     style="background: linear-gradient(135deg, #e74c3c, #c0392b)">
+                    <div class="stat-card-inner">
+                        <div class="stat-card-front">
+                            <div class="stat-icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div class="stat-value">PKR <?php echo number_format($expense_total, 2); ?></div>
+                            <div class="stat-label">Total Expenses</div>
+                        </div>
+                        <div class="stat-card-back">
+                            <h4>Expense Analysis</h4>
+                          
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($expense_total * 12, 2); ?></p>
+                            <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
+                        </div>
                     </div>
-                    <div class="stat-value">PKR <?php echo number_format($expense_total, 2); ?></div>
-                    <div class="stat-label">Total Expenses</div>
                 </div>
             </div>
 
             <!-- Assets Card -->
             <div class="col-md-4 mb-3">
                 <div class="dashboard-card stat-card" 
-                     onclick="window.location='transaction_details.php?type=asset'"
-                     style="cursor: pointer; background: linear-gradient(135deg, #3498db, #2980b9)">
-                    <div class="stat-icon">
-                        <i class="fas fa-landmark"></i>
+                     onclick="handleCardClick(this, 'transaction_details.php?type=asset')"
+                     style="background: linear-gradient(135deg, #3498db, #2980b9)">
+                    <div class="stat-card-inner">
+                        <div class="stat-card-front">
+                            <div class="stat-icon">
+                                <i class="fas fa-landmark"></i>
+                            </div>
+                            <div class="stat-value">PKR <?php echo number_format($assets_total, 2); ?></div>
+                            <div class="stat-label">Total Assets</div>
+                        </div>
+                        <div class="stat-card-back">
+                            <h4>Asset Analysis</h4>
+                       
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($assets_total * 12, 2); ?></p>
+                            <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
+                        </div>
                     </div>
-                    <div class="stat-value">PKR <?php echo number_format($assets_total, 2); ?></div>
-                    <div class="stat-label">Total Assets</div>
                 </div>
             </div>
 
             <!-- Liabilities Card -->
-        <!-- Liabilities Card -->
-<div class="col-md-4 mb-3">
-    <div class="dashboard-card stat-card" 
-         onclick="window.location='transaction_details.php?type=liability'"
-         style="cursor: pointer; background: linear-gradient(135deg, #9b59b6, #8e44ad)">
-        <div class="stat-icon">
-            <i class="fas fa-hand-holding-usd"></i>
-        </div>
-        <div class="stat-value">PKR <?php echo number_format($liabilities_total, 2); ?></div>
-        <div class="stat-label">Total Liabilities</div>
-    </div>
-</div>
-
-<!-- Equities Card -->
-<div class="col-md-4 mb-3">
-    <div class="dashboard-card stat-card" 
-         onclick="window.location='transaction_details.php?type=equity'"
-         style="cursor: pointer; background: linear-gradient(135deg, #f1c40f, #f39c12)">
-        <div class="stat-icon">
-            <i class="fas fa-chart-pie"></i>
-        </div>
-        <div class="stat-value">PKR <?php echo number_format($equities_total, 2); ?></div>
-        <div class="stat-label">Total Equities</div>
-    </div>
-</div>
+            <div class="col-md-4 mb-3">
+                <div class="dashboard-card stat-card" 
+                     onclick="handleCardClick(this, 'transaction_details.php?type=liability')"
+                     style="background: linear-gradient(135deg, #9b59b6, #8e44ad)">
+                    <div class="stat-card-inner">
+                        <div class="stat-card-front">
+                            <div class="stat-icon">
+                                <i class="fas fa-hand-holding-usd"></i>
+                            </div>
+                            <div class="stat-value">PKR <?php echo number_format($liabilities_total, 2); ?></div>
+                            <div class="stat-label">Total Liabilities</div>
+                        </div>
+                        <div class="stat-card-back">
+                            <h4>Liability Analysis</h4>
+                           
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($liabilities_total * 12, 2); ?></p>
+                            <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Equities Card -->
-            
+            <div class="col-md-4 mb-3">
+                <div class="dashboard-card stat-card" 
+                     onclick="handleCardClick(this, 'transaction_details.php?type=equity')"
+                     style="background: linear-gradient(135deg, #f1c40f, #f39c12)">
+                    <div class="stat-card-inner">
+                        <div class="stat-card-front">
+                            <div class="stat-icon">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <div class="stat-value">PKR <?php echo number_format($equities_total, 2); ?></div>
+                            <div class="stat-label">Total Equities</div>
+                        </div>
+                        <div class="stat-card-back">
+                            <h4>Equity Analysis</h4>
+                            
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($equities_total * 12, 2); ?></p>
+                            <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Net Balance Card -->
             <div class="col-md-4 mb-3">
                 <div class="dashboard-card stat-card" style="background: linear-gradient(135deg, #1abc9c, #16a085)">
-                    <div class="stat-icon">
-                        <i class="fas fa-balance-scale"></i>
+                    <div class="stat-card-inner">
+                        <div class="stat-card-front">
+                            <div class="stat-icon">
+                                <i class="fas fa-balance-scale"></i>
+                            </div>
+                            <div class="stat-value">PKR <?php echo number_format($net_balance, 2); ?></div>
+                            <div class="stat-label">Net Balance</div>
+                        </div>
+                        <div class="stat-card-back">
+                            <h4>Net Balance Analysis</h4>
+                            
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($net_balance * 12, 2); ?></p>
+                            <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
+                        </div>
                     </div>
-                    <div class="stat-value">PKR <?php echo number_format($net_balance, 2); ?></div>
-                    <div class="stat-label">Net Balance</div>
                 </div>
             </div>
         </div>
@@ -515,7 +658,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                 <div class="dashboard-card">
                     <div class="card-body">
                         <h4 class="card-title">
-                            <i class="fas fa-dollar-sign me-2"></i>Financial Overview
+                            <i class="fas fa-rupee-sign me-2"></i>Financial Overview
                         </h4>
                         <div class="mt-4">
                             <div class="d-flex justify-content-between mb-2">
@@ -590,6 +733,29 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Function to handle card clicks
+        function handleCardClick(card, url) {
+            // Check if card is flipped
+            const cardInner = card.querySelector('.stat-card-inner');
+            const isFlipped = getComputedStyle(cardInner).transform.includes('180');
+            
+            // Only redirect if card is not flipped
+            if (!isFlipped) {
+                window.location.href = url;
+            }
+        }
+
+        // Add hover effect to all cards
+        document.querySelectorAll('.stat-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.querySelector('.stat-card-inner').style.transform = 'rotateY(180deg)';
+            });
+
+            card.addEventListener('mouseleave', function() {
+                this.querySelector('.stat-card-inner').style.transform = 'rotateY(0deg)';
+            });
         });
     </script>
 </body>
