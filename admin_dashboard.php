@@ -356,6 +356,19 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="laptop_report.php">
+                            <i class="fas fa-laptop me-1"></i> Laptops
+                        </a>
+                    </li>
+                    
+                       <li class="nav-item">
+                        <a class="nav-link" href="stock_report.php">
+                            <i class="fas fa-boxes me-1"></i> Stock
+                        </a>
+                    </li>
+
+
+                    <li class="nav-item">
                     <a class="nav-link" href="view_ledgers.php">
                         <i class="fas fa-book"></i> View Ledgers
                     </a>

@@ -608,6 +608,22 @@ try {
                 </div>
             </div>
         </div>
+
+        <!-- Replace the existing export buttons with these styled ones -->
+        <div class="mb-4">
+            <button onclick="exportToCSV()" class="w-full bg-slate-600 text-white py-3 rounded-lg mb-2 flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+                </svg>
+                Export to CSV
+            </button>
+            <button onclick="exportToExcel()" class="w-full bg-slate-600 text-white py-3 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+                </svg>
+                Export to Excel
+            </button>
+        </div>
     </div>
 
     <script>
@@ -642,6 +658,18 @@ try {
             window.print();
         });
     });
+
+    function exportToCSV() {
+        const fromDate = document.querySelector('input[name="from_date"]').value;
+        const toDate = document.querySelector('input[name="to_date"]').value;
+        window.location.href = `?from_date=${fromDate}&to_date=${toDate}&export=csv`;
+    }
+
+    function exportToExcel() {
+        const fromDate = document.querySelector('input[name="from_date"]').value;
+        const toDate = document.querySelector('input[name="to_date"]').value;
+        window.location.href = `?from_date=${fromDate}&to_date=${toDate}&export=excel`;
+    }
     </script>
 </body>
 </html>
