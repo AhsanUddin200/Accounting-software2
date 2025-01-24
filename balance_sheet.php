@@ -114,11 +114,14 @@ $total_equity = 0;
             border-radius: 0.5rem;
             border: 1px solid rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
+            display: inline-block;
+            margin-right: 1rem;
         }
 
         .back-btn:hover {
             background: rgba(255, 255, 255, 0.1);
             color: white;
+            text-decoration: none;
         }
 
         .print-btn {
@@ -128,11 +131,16 @@ $total_equity = 0;
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
         }
 
         .print-btn:hover {
             background: #f8f9fa;
             transform: translateY(-1px);
+            text-decoration: none;
         }
 
         .main-content {
@@ -195,13 +203,19 @@ $total_equity = 0;
 </head>
 <body>
     <!-- Navigation Bar -->
-    <div class="nav-bar no-print d-flex justify-content-between align-items-center">
+    <div class="nav-bar no-print d-flex align-items-center justify-content-start">
         <a href="admin_dashboard.php" class="back-btn">
             <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+        <a href="reports.php" class="back-btn">
+            <i class="fas fa-arrow-left me-2"></i>Back to Reports
         </a>
         <button onclick="window.print()" class="print-btn">
             <i class="fas fa-print me-2"></i>Print
         </button>
+        <a href="download_balance_sheet.php?as_of_date=<?php echo $as_of_date; ?>" class="print-btn">
+            <i class="fas fa-download me-2"></i>Download
+        </a>
     </div>
 
     <!-- Main Content -->

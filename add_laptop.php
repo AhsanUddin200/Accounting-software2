@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $purchase_date = $_POST['purchase_date'];
         $purchase_price = $_POST['purchase_price'];
         $current_value = $_POST['current_value'];
+        $sale_value = !empty($_POST['sale_value']) ? $_POST['sale_value'] : null;
         $specifications = trim($_POST['specifications']);
         $location = trim($_POST['location']);
         $notes = trim($_POST['notes']);
@@ -44,8 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Insert into database
         $query = "INSERT INTO laptops (
             asset_id, model, serial_number, status, custodian_id,
-            purchase_date, purchase_price, current_value, specifications, location, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            purchase_date, purchase_price, current_value, sale_value, specifications, location, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $conn->prepare($query);
         if (!$stmt) {
@@ -53,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $stmt->bind_param(
-            "sssssdddsss",
+            "sssssdddssss",
             $asset_id,
             $model,
             $serial_number,
@@ -62,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $purchase_date,
             $purchase_price,
             $current_value,
+            $sale_value,
             $specifications,
             $location,
             $notes
@@ -162,6 +164,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="col-md-4">
                         <label class="form-label">Current Value</label>
                         <input type="number" step="0.01" class="form-control" name="current_value" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Sale Value</label>
+                        <input type="number" step="0.01" class="form-control" name="sale_value">
                     </div>
 
                     <div class="col-md-4">

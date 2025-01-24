@@ -88,10 +88,16 @@ $net_balance = $total_debit - $total_credit;
             border: 1px solid rgba(255, 255, 255, 0.5);
             padding: 6px 15px;
             border-radius: 4px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .back-btn:last-child {
+            margin-right: 0;
         }
         .back-btn:hover {
             color: white;
             background: rgba(255, 255, 255, 0.1);
+            text-decoration: none;
         }
         .print-btn {
             background: white;
@@ -160,12 +166,22 @@ $net_balance = $total_debit - $total_credit;
 <body>
     <!-- Navigation Bar -->
     <div class="nav-bar no-print d-flex justify-content-between align-items-center">
-        <a href="admin_dashboard.php" class="back-btn">
-            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-        </a>
-        <button onclick="window.print()" class="print-btn">
-            <i class="fas fa-print me-2"></i>Print
-        </button>
+        <div>
+            <a href="admin_dashboard.php" class="back-btn">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+            <a href="reports.php" class="back-btn">
+                <i class="fas fa-file-alt me-2"></i>Back to Reports
+            </a>
+        </div>
+        <div>
+            <button onclick="exportToCSV()" class="print-btn me-2">
+                <i class="fas fa-file-csv me-2"></i>Export CSV
+            </button>
+            <button onclick="window.print()" class="print-btn">
+                <i class="fas fa-print me-2"></i>Print
+            </button>
+        </div>
     </div>
 
     <!-- Main Content -->
@@ -252,5 +268,10 @@ $net_balance = $total_debit - $total_credit;
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function exportToCSV() {
+        window.location.href = `export_trial_balance.php?from_date=<?php echo $from_date; ?>&to_date=<?php echo $to_date; ?>`;
+    }
+    </script>
 </body>
 </html>

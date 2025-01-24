@@ -113,7 +113,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <form method="POST" class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Item Code</label>
-                    <input type="text" class="form-control" name="item_code" required>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="item_code" id="item_code" required>
+                        
+                    </div>
                 </div>
 
                 <div class="col-md-4">
@@ -183,5 +186,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function generateCode() {
+        fetch('generate_item_code.php')
+            .then(response => response.text())
+            .then(code => {
+                document.getElementById('item_code').value = code;
+            });
+    }
+    </script>
 </body>
 </html> 

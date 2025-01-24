@@ -83,6 +83,43 @@ foreach ($items as $item) {
         .in-stock {
             color: #10B981;
         }
+
+        .summary-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .summary-card h5 {
+            color: #6B7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card h3 {
+            color: #111827;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .summary-card .btn {
+            margin: 0 0.25rem;
+        }
+
+        .text-primary {
+            color: #3B82F6 !important;
+        }
+
+        .text-success {
+            color: #10B981 !important;
+        }
+
+        .text-warning {
+            color: #F59E0B !important;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+        }
     </style>
 </head>
 <body>
@@ -136,6 +173,77 @@ foreach ($items as $item) {
                     </div>
                     <h5>Out of Stock</h5>
                     <h3><?php echo $out_of_stock; ?></h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update the summary cards section with buttons -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="summary-card">
+                    <div class="summary-icon text-primary">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <h5>Pending MRs</h5>
+                    <h3><?php echo getPendingMRCount(); ?></h3>
+                    <div class="mt-3">
+                        <a href="material_requisition.php" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i>Create MR
+                        </a>
+                        <a href="mr_list.php" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>View All
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-card">
+                    <div class="summary-icon text-success">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <h5>Open POs</h5>
+                    <h3><?php 
+                        $query = "SELECT COUNT(*) as count FROM purchase_orders WHERE status = 'pending'";
+                        $result = $conn->query($query);
+                        $count = 0;
+                        if ($result && $row = $result->fetch_assoc()) {
+                            $count = $row['count'];
+                        }
+                        echo $count;
+                    ?></h3>
+                    <div class="mt-3">
+                        <a href="purchase_order.php" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>Create PO
+                        </a>
+                        <a href="po_list.php" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-list me-1"></i>View All
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-card">
+                    <div class="summary-icon text-warning">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h5>Pending GRNs</h5>
+                    <h3><?php 
+                        $query = "SELECT COUNT(*) as count FROM goods_receipt_notes WHERE status = 'pending'";
+                        $result = $conn->query($query);
+                        $count = 0;
+                        if ($result && $row = $result->fetch_assoc()) {
+                            $count = $row['count'];
+                        }
+                        echo $count;
+                    ?></h3>
+                    <div class="mt-3">
+                        <a href="goods_received.php" class="btn btn-sm btn-warning">
+                            <i class="fas fa-plus me-1"></i>Create GRN
+                        </a>
+                        <a href="grn_list.php" class="btn btn-sm btn-outline-warning">
+                            <i class="fas fa-list me-1"></i>View All
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

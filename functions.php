@@ -128,4 +128,49 @@ function getLedgerBalance($conn, $account_type) {
     }
     return 0;
 }
+
+// Function to get pending MR count
+function getPendingMRCount() {
+    global $conn;
+    try {
+        $query = "SELECT COUNT(*) as count FROM material_requisitions WHERE status = 'pending'";
+        $result = $conn->query($query);
+        if ($result) {
+            return $result->fetch_assoc()['count'];
+        }
+    } catch (Exception $e) {
+        error_log("Error in getPendingMRCount: " . $e->getMessage());
+    }
+    return 0;
+}
+
+// Function to get open PO count
+function getOpenPOCount() {
+    global $conn;
+    try {
+        $query = "SELECT COUNT(*) as count FROM purchase_orders WHERE status IN ('draft', 'sent', 'partial')";
+        $result = $conn->query($query);
+        if ($result) {
+            return $result->fetch_assoc()['count'];
+        }
+    } catch (Exception $e) {
+        error_log("Error in getOpenPOCount: " . $e->getMessage());
+    }
+    return 0;
+}
+
+// Function to get pending GRN count
+function getPendingGRNCount() {
+    global $conn;
+    try {
+        $query = "SELECT COUNT(*) as count FROM goods_received_notes WHERE status = 'pending'";
+        $result = $conn->query($query);
+        if ($result) {
+            return $result->fetch_assoc()['count'];
+        }
+    } catch (Exception $e) {
+        error_log("Error in getPendingGRNCount: " . $e->getMessage());
+    }
+    return 0;
+}
 ?>

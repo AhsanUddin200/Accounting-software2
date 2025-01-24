@@ -44,6 +44,17 @@ try {
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        // Check if item code already exists for other items
+        $check_query = "SELECT id FROM stock_items WHERE item_code = ? AND id != ?";
+        $check_stmt = $conn->prepare($check_query);
+        $check_stmt->bind_param("si", $_POST['item_code'], $item_id);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            throw new Exception("Item code already exists. Please use a unique item code.");
+        }
+
         // Validate and sanitize input
         $item_code = trim($_POST['item_code']);
         $name = trim($_POST['name']);

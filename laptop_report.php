@@ -187,6 +187,7 @@ foreach ($laptops as $laptop) {
                             <th>Purchase Date</th>
                             <th>Purchase Price</th>
                             <th>Current Value</th>
+                            <th>Sale Value</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -208,6 +209,7 @@ foreach ($laptops as $laptop) {
                                     <td><?php echo date('Y-m-d', strtotime($laptop['purchase_date'])); ?></td>
                                     <td>PKR <?php echo number_format($laptop['purchase_price'], 2); ?></td>
                                     <td>PKR <?php echo number_format($laptop['current_value'], 2); ?></td>
+                                    <td>PKR <?php echo $laptop['sale_value'] ? number_format($laptop['sale_value'], 2) : '-'; ?></td>
                                     <td>
                                         <a href="edit_laptop.php?id=<?php echo $laptop['id']; ?>" 
                                            class="btn btn-sm btn-primary me-1" 

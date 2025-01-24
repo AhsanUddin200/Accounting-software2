@@ -379,11 +379,15 @@ try {
 </head>
 <body class="min-h-screen py-12">
     <div class="container">
-        <!-- Back Button -->
+        <!-- Back Buttons -->
         <div class="mb-8 no-print">
-            <a href="financial_reports.php" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i>
-                <span>Back to Reports</span>
+            <a href="admin_dashboard.php" class="btn btn-secondary mr-2">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Dashboard
+            </a>
+            <a href="reports.php" class="btn btn-secondary">
+                <i class="fas fa-file-alt mr-2"></i>
+                Back to Reports
             </a>
         </div>
 
@@ -419,6 +423,10 @@ try {
                         <button type="submit" class="btn btn-primary w-full mb-2">
                             <i class="fas fa-filter"></i>
                             <span>Apply Filter</span>
+                        </button>
+                        <button type="button" onclick="exportToCSV()" class="btn btn-secondary w-full mb-2">
+                            <i class="fas fa-file-csv"></i>
+                            <span>Export CSV</span>
                         </button>
                         <button type="button" onclick="window.print()" class="btn btn-secondary w-full">
                             <i class="fas fa-print"></i>
@@ -608,32 +616,10 @@ try {
                 </div>
             </div>
         </div>
-
-        <!-- Replace the existing export buttons with these styled ones -->
-        <div class="mb-4">
-            <button onclick="exportToCSV()" class="w-full bg-slate-600 text-white py-3 rounded-lg mb-2 flex items-center justify-center">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-                </svg>
-                Export to CSV
-            </button>
-            <button onclick="exportToExcel()" class="w-full bg-slate-600 text-white py-3 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-                </svg>
-                Export to Excel
-            </button>
-        </div>
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Add smooth transitions for filter changes
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function() {
-            document.querySelector('.statement-card').style.opacity = '0.5';
-        });
-
         // Format numbers with animations
         document.querySelectorAll('.amount').forEach(el => {
             const value = parseFloat(el.textContent.replace(/,/g, ''));
@@ -652,23 +638,10 @@ try {
                 this.style.backgroundColor = '';
             });
         });
-
-        // Print functionality
-        document.querySelector('.btn-secondary').addEventListener('click', function() {
-            window.print();
-        });
     });
 
     function exportToCSV() {
-        const fromDate = document.querySelector('input[name="from_date"]').value;
-        const toDate = document.querySelector('input[name="to_date"]').value;
-        window.location.href = `?from_date=${fromDate}&to_date=${toDate}&export=csv`;
-    }
-
-    function exportToExcel() {
-        const fromDate = document.querySelector('input[name="from_date"]').value;
-        const toDate = document.querySelector('input[name="to_date"]').value;
-        window.location.href = `?from_date=${fromDate}&to_date=${toDate}&export=excel`;
+        window.location.href = `export_income_statement.php?from_date=<?php echo $data['from_date']; ?>&to_date=<?php echo $data['to_date']; ?>`;
     }
     </script>
 </body>
