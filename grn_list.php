@@ -115,11 +115,12 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                                         </td>
                                         <td><?php echo date('Y-m-d H:i', strtotime($grn['created_at'])); ?></td>
                                         <td>
-                                            <a href="view_grn.php?id=<?php echo $grn['id']; ?>" 
-                                               class="btn btn-sm btn-info me-1" 
-                                               title="View">
+                                            <button type="button" 
+                                                    onclick="viewGRNDetails(<?php echo $grn['id']; ?>)"
+                                                    class="btn btn-sm btn-info me-1" 
+                                                    title="View">
                                                 <i class="fas fa-eye"></i>
-                                            </a>
+                                            </button>
                                             <?php if ($grn['status'] === 'pending'): ?>
                                                 <a href="edit_grn.php?id=<?php echo $grn['id']; ?>" 
                                                    class="btn btn-sm btn-primary me-1" 
@@ -148,8 +149,53 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
         </div>
     </div>
 
+    <!-- Add this modal HTML before the closing </div> of container -->
+    <div class="modal fade" id="grnDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">GRN Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="grnDetailsContent">
+                        <!-- Content will be loaded here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    function viewGRNDetails(grnId) {
+        // Show loading state
+        document.getElementById('grnDetailsContent').innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin"></i> Loading...
+            </div>`;
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('grnDetailModal'));
+        modal.show();
+        
+        // Fetch GRN details
+        fetch(`get_grn_details.php?id=${grnId}`)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('grnDetailsContent').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('grnDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading details. Please try again.
+                    </div>`;
+            });
+    }
+
     function deleteGRN(id) {
         if (confirm('Are you sure you want to delete this GRN?')) {
             window.location.href = `delete_grn.php?id=${id}`;

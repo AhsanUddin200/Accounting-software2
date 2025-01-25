@@ -107,11 +107,12 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                                         </td>
                                         <td><?php echo date('Y-m-d H:i', strtotime($mr['created_at'])); ?></td>
                                         <td>
-                                            <a href="view_mr.php?id=<?php echo $mr['id']; ?>" 
-                                               class="btn btn-sm btn-info me-1" 
-                                               title="View Details">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-info me-1" 
+                                                    onclick="viewMRDetails(<?php echo $mr['id']; ?>)"
+                                                    title="View Details">
                                                 <i class="fas fa-eye"></i>
-                                            </a>
+                                            </button>
                                             <?php if ($mr['status'] === 'pending'): ?>
                                             <a href="edit_mr.php?id=<?php echo $mr['id']; ?>" 
                                                class="btn btn-sm btn-primary me-1" 
@@ -140,12 +141,66 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
         </div>
     </div>
 
+    <div class="modal fade" id="mrDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Material Requisition Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="mrDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <?php if ($_SESSION['role'] === 'admin'): ?>
+                    <button type="button" class="btn btn-primary" onclick="applyChanges()">Apply</button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function deleteMR(id) {
         if (confirm('Are you sure you want to delete this Material Requisition?')) {
             window.location.href = `delete_mr.php?id=${id}`;
         }
+    }
+
+    function viewMRDetails(mrId) {
+        fetch(`get_mr_details.php?id=${mrId}`)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('mrDetailsContent').innerHTML = data;
+                new bootstrap.Modal(document.getElementById('mrDetailModal')).show();
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function applyChanges() {
+        const status = document.getElementById('mrStatus').value;
+        const remarks = document.getElementById('mrRemarks').value;
+        const mrId = document.getElementById('mrId').value;
+
+        fetch('update_mr_status.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `id=${mrId}&status=${status}&remarks=${remarks}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Status updated successfully');
+                location.reload();
+            } else {
+                alert('Error updating status');
+            }
+        })
+        .catch(error => console.error('Error:', error));
     }
     </script>
 </body>

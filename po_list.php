@@ -118,11 +118,12 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                                     </td>
                                     <td><?php echo date('Y-m-d H:i', strtotime($po['created_at'])); ?></td>
                                     <td>
-                                        <a href="view_po.php?id=<?php echo $po['id']; ?>" 
-                                           class="btn btn-sm btn-info me-1" 
-                                           title="View Details">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-info me-1" 
+                                                onclick="viewPODetails(<?php echo $po['id']; ?>)"
+                                                title="View Details">
                                             <i class="fas fa-eye"></i>
-                                        </a>
+                                        </button>
                                         <?php if ($po['status'] === 'pending'): ?>
                                         <a href="edit_po.php?id=<?php echo $po['id']; ?>" 
                                            class="btn btn-sm btn-primary me-1" 
@@ -150,12 +151,56 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
         </div>
     </div>
 
+    <div class="modal fade" id="poDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Purchase Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="poDetailsContent">
+                        <!-- Content will be loaded here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function deletePO(id) {
         if (confirm('Are you sure you want to delete this Purchase Order?')) {
             window.location.href = `delete_po.php?id=${id}`;
         }
+    }
+
+    function viewPODetails(poId) {
+        // Show loading state
+        document.getElementById('poDetailsContent').innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin"></i> Loading...
+            </div>`;
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('poDetailModal'));
+        modal.show();
+        
+        // Fetch PO details
+        fetch(`get_po_details.php?id=${poId}`)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('poDetailsContent').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('poDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading details. Please try again.
+                    </div>`;
+            });
     }
     </script>
 </body>

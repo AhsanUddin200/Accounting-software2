@@ -2,16 +2,38 @@
 require_once 'session.php';
 require_once 'db.php';
 
+session_start();
+
 // Ensure user has appropriate permissions
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit();
 }
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
-        // Generate MR number (MR + current date + sequential number)
+        // Validate CSRF token
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+            throw new Exception("CSRF token validation failed.");
+        }
+
+        // Sanitize inputs
+        $department = htmlspecialchars($_POST['department']);
+        $date_required = htmlspecialchars($_POST['date_required']);
+        $remarks = htmlspecialchars($_POST['remarks']);
+
+        // Validate date format
+        if (!DateTime::createFromFormat('Y-m-d', $date_required)) {
+            throw new Exception("Invalid date format for 'date_required'.");
+        }
+
+        // Generate MR number
         $date = date('Ymd');
         $query = "SELECT MAX(SUBSTRING(mr_number, -4)) as max_num 
                  FROM material_requisitions 
@@ -21,67 +43,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $next_num = $row['max_num'] ? intval($row['max_num']) + 1 : 1;
         $mr_number = "MR" . $date . sprintf("%04d", $next_num);
 
-        // Prepare the insert statement
+        // Start transaction
+        $conn->begin_transaction();
+
+        // Insert MR
         $stmt = $conn->prepare("INSERT INTO material_requisitions 
             (mr_number, department, requested_by, date_required, status, remarks) 
             VALUES (?, ?, ?, ?, 'pending', ?)");
-
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . $conn->error);
-        }
-
-        // Bind parameters
-        $stmt->bind_param("ssiss", 
-            $mr_number,
-            $_POST['department'],
-            $_SESSION['user_id'],
-            $_POST['date_required'],
-            $_POST['remarks']
-        );
-
-        // Execute the statement
-        if (!$stmt->execute()) {
-            throw new Exception("Execute failed: " . $stmt->error);
-        }
-
+        $stmt->bind_param("ssiss", $mr_number, $department, $_SESSION['user_id'], $date_required, $remarks);
+        $stmt->execute();
         $mr_id = $conn->insert_id;
 
         // Insert items
-        if (isset($_POST['items']) && is_array($_POST['items'])) {
-            $item_stmt = $conn->prepare("INSERT INTO mr_items 
-                (mr_id, item_code, description, quantity, unit, purpose) 
-                VALUES (?, ?, ?, ?, ?, ?)");
-
-            foreach ($_POST['items'] as $item) {
-                $item_stmt->bind_param("ississ",
-                    $mr_id,
-                    $item['item_code'],
-                    $item['description'],
-                    $item['quantity'],
-                    $item['unit'],
-                    $item['purpose']
-                );
-                $item_stmt->execute();
-            }
+        if (!isset($_POST['items']) || empty($_POST['items'])) {
+            throw new Exception("At least one item is required.");
         }
 
+        $item_stmt = $conn->prepare("INSERT INTO mr_items 
+            (mr_id, item_code, description, quantity, unit, purpose) 
+            VALUES (?, ?, ?, ?, ?, ?)");
+
+        foreach ($_POST['items'] as $item) {
+            $item_stmt->bind_param("ississ", $mr_id, $item['item_code'], $item['description'], $item['quantity'], $item['unit'], $item['purpose']);
+            $item_stmt->execute();
+        }
+
+        // Commit transaction
+        $conn->commit();
+
         // Redirect on success
-        header("Location: mr_list.php?success=1");
+        $_SESSION['success_message'] = "Material Requisition saved successfully!";
+        header("Location: mr_list.php");
         exit();
 
     } catch (Exception $e) {
-        $error_message = "Error: " . $e->getMessage();
-        error_log($error_message);
+        $conn->rollback(); // Rollback on error
+        $_SESSION['error_message'] = "Error: " . $e->getMessage();
+        header("Location: mr_form.php");
+        exit();
     }
 }
 
 // Generate initial MR number for display
 $mr_number = "MR" . date("Ymd") . sprintf("%04d", 1);
 
-// Add this at the top after processing form submission
+// Retrieve success/error messages from session
 $success_message = '';
-if (isset($_GET['success']) && $_GET['success'] == 1) {
-    $success_message = "Material Requisition saved successfully!";
+$error_message = '';
+
+if (isset($_SESSION['success_message'])) {
+    $success_message = $_SESSION['success_message'];
+    unset($_SESSION['success_message']);
+}
+
+if (isset($_SESSION['error_message'])) {
+    $error_message = $_SESSION['error_message'];
+    unset($_SESSION['error_message']);
 }
 ?>
 <!DOCTYPE html>
@@ -118,7 +135,7 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
         <?php endif; ?>
 
         <!-- Error Message -->
-        <?php if (isset($error_message)): ?>
+        <?php if ($error_message): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i><?php echo $error_message; ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -133,6 +150,7 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                 </div>
             </div>
             <form method="POST" class="row g-3" id="mrForm">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <div class="col-md-6">
                     <label class="form-label">Department</label>
                     <input type="text" class="form-control" name="department" required>
@@ -213,6 +231,13 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
     document.addEventListener('DOMContentLoaded', function() {
         addRow();
     });
+
+    // Disable submit button after form submission
+    document.getElementById('mrForm').addEventListener('submit', function() {
+        const submitButton = this.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+    });
     </script>
 </body>
-</html> 
+</html>

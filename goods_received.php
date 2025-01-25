@@ -136,12 +136,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <thead>
                             <tr>
                                 <th>Item Code</th>
-                                <th>Description</th>
                                 <th>Ordered Qty</th>
                                 <th>Received Qty</th>
                                 <th>Unit</th>
                                 <th>Condition</th>
                                 <th>Remarks</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="itemsBody">
@@ -179,40 +179,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .then(response => response.json())
             .then(items => {
                 const tbody = document.getElementById('itemsBody');
-                tbody.innerHTML = items.map(item => `
+                tbody.innerHTML = items.map((item, index) => `
                     <tr>
                         <td>
-                            <input type="hidden" name="items[][item_code]" value="${item.item_code}">
-                            ${item.item_code}
+                            <input type="text" name="items[${index}][item_code]" class="form-control" value="${item.item_code}" readonly required>
                         </td>
                         <td>
-                            <input type="hidden" name="items[][description]" value="${item.description}">
-                            ${item.description}
+                            <input type="number" name="items[${index}][ordered_qty]" class="form-control" step="0.01" min="0" value="${item.quantity}" readonly required>
                         </td>
                         <td>
-                            <input type="hidden" name="items[][ordered_qty]" value="${item.quantity}">
-                            ${item.quantity}
+                            <input type="number" name="items[${index}][received_qty]" class="form-control" step="0.01" min="0" value="${item.quantity}" required>
                         </td>
                         <td>
-                            <input type="number" class="form-control" name="items[][received_qty]" 
-                                   required min="0" max="${item.quantity}" step="0.01">
+                            <input type="text" name="items[${index}][unit]" class="form-control" value="${item.unit}" readonly required>
                         </td>
                         <td>
-                            <input type="hidden" name="items[][unit]" value="${item.unit}">
-                            ${item.unit}
-                        </td>
-                        <td>
-                            <select class="form-select" name="items[][condition]" required>
+                            <select class="form-select" name="items[${index}][condition]" required>
                                 <option value="good">Good</option>
                                 <option value="damaged">Damaged</option>
                                 <option value="partial">Partial</option>
                             </select>
                         </td>
                         <td>
-                            <input type="text" class="form-control" name="items[][remarks]">
+                            <input type="text" class="form-control" name="items[${index}][remarks]">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm delete-row" disabled>
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
                 `).join('');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading PO items');
             });
     }
     </script>
