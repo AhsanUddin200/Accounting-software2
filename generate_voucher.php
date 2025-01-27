@@ -6,11 +6,11 @@ require_once 'functions.php';
 function getVoucherType($voucher_number) {
     global $conn;
     
-    // Get the transaction details for this voucher
-    $query = "SELECT l.debit, l.credit, ah.name as head_name 
+    $query = "SELECT l.debit, l.credit, ah.name as head_name, ac.name as category_name 
               FROM transactions t
               JOIN ledgers l ON t.id = l.transaction_id
               JOIN accounting_heads ah ON t.head_id = ah.id
+              JOIN account_categories ac ON t.category_id = ac.id
               WHERE t.voucher_number = ?";
               
     $stmt = $conn->prepare($query);
@@ -18,49 +18,44 @@ function getVoucherType($voucher_number) {
     $stmt->execute();
     $result = $stmt->get_result();
     
-    $has_income = false;
-    $has_expense = false;
+    $cash_bank_debited = false;
+    $cash_bank_credited = false;
     
     while ($row = $result->fetch_assoc()) {
-        // Check for income transactions (credit in income accounts)
-        if (stripos($row['head_name'], 'income') !== false || 
-            stripos($row['head_name'], 'fees') !== false || 
-            stripos($row['head_name'], 'revenue') !== false) {
-            if ($row['credit'] > 0) {
-                $has_income = true;
-            }
-        }
-        
-        // Check for expense transactions (debit in expense accounts)
-        if (stripos($row['head_name'], 'expense') !== false || 
-            stripos($row['head_name'], 'payment') !== false || 
-            stripos($row['head_name'], 'cost') !== false) {
+        // Check if Cash or Bank account is involved
+        if (stripos($row['head_name'], 'cash in hand') !== false || 
+            stripos($row['category_name'], 'cash in hand') !== false ||
+            stripos($row['head_name'], 'bank') !== false ||
+            stripos($row['category_name'], 'bank') !== false) {
             if ($row['debit'] > 0) {
-                $has_expense = true;
+                $cash_bank_debited = true;
+            }
+            if ($row['credit'] > 0) {
+                $cash_bank_credited = true;
             }
         }
     }
     
-    // Determine voucher type based on transaction nature
-    if ($has_income && !$has_expense) {
+    // Determine voucher type based on Cash/Bank entries
+    if ($cash_bank_debited) {
         return [
             'receipt-voucher',
-            'Income Voucher',
-            'Used for recording income transactions such as student fees and other receipts',
+            'Receipt Voucher',  // Changed from 'Income Voucher' to 'Receipt Voucher'
+            'Used for recording cash/bank receipts',
             'RV'
         ];
-    } elseif ($has_expense && !$has_income) {
+    } elseif ($cash_bank_credited) {
         return [
             'payment-voucher',
             'Payment Voucher',
-            'Used for recording payments to suppliers, creditors, and other expenses',
+            'Used for recording cash/bank payments',
             'PV'
         ];
     } else {
         return [
             'journal-voucher',
             'Journal Voucher',
-            'Used for recording general transactions that don\'t involve direct cash payments or receipts',
+            'Used for recording non-cash transactions',
             'JV'
         ];
     }
