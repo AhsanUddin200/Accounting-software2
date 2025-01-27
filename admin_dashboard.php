@@ -19,43 +19,64 @@ $period_end = date('Y-m-t');    // Last day of current month
 $start_date = date('Y-m-01');
 $end_date = date('Y-m-t');
 
-// Income Total - where type is 'income'
-$income_query = "SELECT SUM(amount) as total_amount 
+// Income Total with YTD
+$income_query = "SELECT 
+    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
     WHERE type = 'income'";
 $result = $conn->query($income_query);
-$income_total = $result->fetch_assoc()['total_amount'] ?? 0;
+$income_data = $result->fetch_assoc();
+$income_total = $income_data['current_amount'] ?? 0;
+$income_ytd = $income_data['ytd_amount'] ?? 0;
 
-// Expenses Total - where type is 'expense'
-$expense_query = "SELECT SUM(amount) as total_amount 
+// Expenses Total with YTD
+$expense_query = "SELECT 
+    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
     WHERE type = 'expense'";
 $result = $conn->query($expense_query);
-$expense_total = $result->fetch_assoc()['total_amount'] ?? 0;
+$expense_data = $result->fetch_assoc();
+$expense_total = $expense_data['current_amount'] ?? 0;
+$expense_ytd = $expense_data['ytd_amount'] ?? 0;
 
-// Assets Total - where type is 'asset'
-$assets_query = "SELECT SUM(amount) as total_amount 
+// Assets Total with YTD
+$assets_query = "SELECT 
+    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
     WHERE type = 'asset'";
 $result = $conn->query($assets_query);
-$assets_total = $result->fetch_assoc()['total_amount'] ?? 0;
+$assets_data = $result->fetch_assoc();
+$assets_total = $assets_data['current_amount'] ?? 0;
+$assets_ytd = $assets_data['ytd_amount'] ?? 0;
 
-// Liabilities Total - where type is 'liability'
-$liabilities_query = "SELECT SUM(amount) as total_amount 
+// Liabilities Total with YTD
+$liabilities_query = "SELECT 
+    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
     WHERE type = 'liability'";
 $result = $conn->query($liabilities_query);
-$liabilities_total = $result->fetch_assoc()['total_amount'] ?? 0;
+$liabilities_data = $result->fetch_assoc();
+$liabilities_total = $liabilities_data['current_amount'] ?? 0;
+$liabilities_ytd = $liabilities_data['ytd_amount'] ?? 0;
 
-// Equities Total - where type is 'equity'
-$equities_query = "SELECT SUM(amount) as total_amount 
+// Equities Total with YTD
+$equities_query = "SELECT 
+    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
     WHERE type = 'equity'";
 $result = $conn->query($equities_query);
-$equities_total = $result->fetch_assoc()['total_amount'] ?? 0;
+$equities_data = $result->fetch_assoc();
+$equities_total = $equities_data['current_amount'] ?? 0;
+$equities_ytd = $equities_data['ytd_amount'] ?? 0;
 
-// Calculate Net Balance
+// Calculate Net Balance for both current period and YTD
 $net_balance = $income_total - $expense_total;
+$net_balance_ytd = $income_ytd - $expense_ytd;
 
 // Fetch total number of users
 $user_count_result = $conn->query("SELECT COUNT(*) as total_users FROM users");
@@ -425,8 +446,8 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <div class="stat-card-back">
                             <h4>Income Analysis</h4>
                           
-                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($income_total * 12, 2); ?></p>
-                            <p><i class="fas fa-chart-bar"></i> Avg Monthly: PKR <?php echo number_format($income_total / 12, 2); ?></p>
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($income_ytd, 2); ?></p>
+                            <p><i class="fas fa-chart-bar"></i> Avg Monthly: PKR <?php echo number_format($income_ytd / date('n'), 2); ?></p>
                             <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
                         </div>
                     </div>
@@ -449,7 +470,8 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <div class="stat-card-back">
                             <h4>Expense Analysis</h4>
                           
-                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($expense_total * 12, 2); ?></p>
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($expense_ytd, 2); ?></p>
+                            <p><i class="fas fa-chart-bar"></i> Avg Monthly: PKR <?php echo number_format($expense_ytd / date('n'), 2); ?></p>
                             <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
                         </div>
                     </div>
@@ -472,7 +494,8 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <div class="stat-card-back">
                             <h4>Asset Analysis</h4>
                        
-                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($assets_total * 12, 2); ?></p>
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($assets_ytd, 2); ?></p>
+                            <p><i class="fas fa-chart-bar"></i> Avg Monthly: PKR <?php echo number_format($assets_ytd / date('n'), 2); ?></p>
                             <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
                         </div>
                     </div>
@@ -495,7 +518,8 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <div class="stat-card-back">
                             <h4>Liability Analysis</h4>
                            
-                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($liabilities_total * 12, 2); ?></p>
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($liabilities_ytd, 2); ?></p>
+                            <p><i class="fas fa-chart-bar"></i> Avg Monthly: PKR <?php echo number_format($liabilities_ytd / date('n'), 2); ?></p>
                             <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
                         </div>
                     </div>
@@ -518,7 +542,8 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <div class="stat-card-back">
                             <h4>Equity Analysis</h4>
                             
-                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($equities_total * 12, 2); ?></p>
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($equities_ytd, 2); ?></p>
+                            <p><i class="fas fa-chart-bar"></i> Avg Monthly: PKR <?php echo number_format($equities_ytd / date('n'), 2); ?></p>
                             <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
                         </div>
                     </div>
@@ -539,7 +564,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         <div class="stat-card-back">
                             <h4>Net Balance Analysis</h4>
                             
-                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($net_balance * 12, 2); ?></p>
+                            <p><i class="fas fa-calendar-alt"></i> YTD: PKR <?php echo number_format($net_balance_ytd, 2); ?></p>
                             <p><i class="fas fa-clock"></i> Last Updated: <?php echo date('d M Y'); ?></p>
                         </div>
                     </div>
