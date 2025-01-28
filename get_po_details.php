@@ -74,7 +74,7 @@ try {
                         <th>Created At:</th>
                         <td><?php echo date('Y-m-d H:i', strtotime($po['created_at'])); ?></td>
                     </tr>
-                </table>
+                </table>    
             </div>
         </div>
 
@@ -123,6 +123,33 @@ try {
             <div class="card">
                 <div class="card-body">
                     <?php echo nl2br(htmlspecialchars($po['notes'])); ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Add Status Change Section -->
+        <?php if ($po['status'] === 'pending'): ?>
+        <div class="mt-4">
+            <h6 class="text-muted">Update Status</h6>
+            <div class="card">
+                <div class="card-body">
+                    <input type="hidden" id="poId" value="<?php echo $po_id; ?>">
+                    <div class="mb-3">
+                        <label for="poStatus" class="form-label">Status</label>
+                        <select class="form-select" id="poStatus">
+                            <option value="pending" <?php echo $po['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                            <option value="approved" <?php echo $po['status'] === 'approved' ? 'selected' : ''; ?>>Approved</option>
+                            <option value="rejected" <?php echo $po['status'] === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="poRemarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" id="poRemarks" rows="2"><?php echo htmlspecialchars($po['remarks'] ?? ''); ?></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="savePOStatus()">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
                 </div>
             </div>
         </div>

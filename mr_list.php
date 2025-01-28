@@ -202,6 +202,33 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
         })
         .catch(error => console.error('Error:', error));
     }
+
+    function updateStatus(mrId, newStatus) {
+        if (confirm('Are you sure you want to mark this MR as completed?')) {
+            fetch('update_mr_status.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: mrId,
+                    status: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error updating status: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating status');
+            });
+        }
+    }
     </script>
 </body>
 </html> 

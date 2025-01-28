@@ -184,8 +184,27 @@ foreach ($items as $item) {
                     <div class="summary-icon text-primary">
                         <i class="fas fa-file-invoice"></i>
                     </div>
-                    <h5>Pending MRs</h5>
-                    <h3><?php echo getPendingMRCount(); ?></h3>
+                    <h5>Material Requisition (MR)</h5>
+                    <div class="text-center">
+                        <div class="d-flex justify-content-center gap-4">
+                            <div>
+                                <small class="text-muted">Pending</small>
+                                <h3 class="text-warning mb-0"><?php 
+                                    $query = "SELECT COUNT(*) as count FROM material_requisitions WHERE status = 'pending'";
+                                    $result = $conn->query($query);
+                                    echo ($result && $row = $result->fetch_assoc()) ? $row['count'] : 0;
+                                ?></h3>
+                            </div>
+                            <div>
+                            <small style="font-size: 13px; color: gray;">Completed</small> <small style="font-size: 8px; color: green; font-weight: bold;">Approved</small>
+                                <h3 class="text-primary mb-0"><?php 
+                                    $query = "SELECT COUNT(*) as count FROM material_requisitions WHERE status = 'approved'";
+                                    $result = $conn->query($query);
+                                    echo ($result && $row = $result->fetch_assoc()) ? $row['count'] : 0;
+                                ?></h3>
+                            </div>
+                        </div>
+                    </div>
                     <div class="mt-3">
                         <a href="material_requisition.php" class="btn btn-sm btn-primary">
                             <i class="fas fa-plus me-1"></i>Create MR
@@ -201,16 +220,28 @@ foreach ($items as $item) {
                     <div class="summary-icon text-success">
                         <i class="fas fa-shopping-cart"></i>
                     </div>
-                    <h5>Open POs</h5>
-                    <h3><?php 
-                        $query = "SELECT COUNT(*) as count FROM purchase_orders WHERE status = 'pending'";
-                        $result = $conn->query($query);
-                        $count = 0;
-                        if ($result && $row = $result->fetch_assoc()) {
-                            $count = $row['count'];
-                        }
-                        echo $count;
-                    ?></h3>
+                    <h5>Purchase Orders (PO)</h5>
+                    <div class="text-center">
+                        <div class="d-flex justify-content-center gap-4">
+                            <div>
+                                <small class="text-muted">Pending</small>
+                                <h3 class="text-warning mb-0"><?php 
+                                    $query = "SELECT COUNT(*) as count FROM purchase_orders WHERE status = 'pending'";
+                                    $result = $conn->query($query);
+                                    echo ($result && $row = $result->fetch_assoc()) ? $row['count'] : 0;
+                                ?></h3>
+                            </div>
+                            <div>
+                            <small style="font-size: 13px; color: gray;">Completed</small> <small style="font-size: 8px; color: green; font-weight: bold;">Approved</small>
+
+                                <h3 class="text-primary mb-0"><?php 
+                                    $query = "SELECT COUNT(*) as count FROM purchase_orders WHERE status = 'approved'";
+                                    $result = $conn->query($query);
+                                    echo ($result && $row = $result->fetch_assoc()) ? $row['count'] : 0;
+                                ?></h3>
+                            </div>
+                        </div>
+                    </div>
                     <div class="mt-3">
                         <a href="purchase_order.php" class="btn btn-sm btn-success">
                             <i class="fas fa-plus me-1"></i>Create PO
@@ -226,16 +257,27 @@ foreach ($items as $item) {
                     <div class="summary-icon text-warning">
                         <i class="fas fa-truck"></i>
                     </div>
-                    <h5>Pending GRNs</h5>
-                    <h3><?php 
-                        $query = "SELECT COUNT(*) as count FROM goods_receipt_notes WHERE status = 'pending'";
-                        $result = $conn->query($query);
-                        $count = 0;
-                        if ($result && $row = $result->fetch_assoc()) {
-                            $count = $row['count'];
-                        }
-                        echo $count;
-                    ?></h3>
+                    <h5>Goods Receipt Notes (GRN)</h5>
+                    <div class="text-center">
+                        <div class="d-flex justify-content-center gap-4">
+                            <div>
+                                <small class="text-muted">Pending</small>
+                                <h3 class="text-warning mb-0"><?php 
+                                    $query = "SELECT COUNT(*) as count FROM goods_receipt_notes WHERE status = 'pending'";
+                                    $result = $conn->query($query);
+                                    echo ($result && $row = $result->fetch_assoc()) ? $row['count'] : 0;
+                                ?></h3>
+                            </div>
+                            <div>
+                            <small style="font-size: 13px; color: gray;">Completed</small> <small style="font-size: 8px; color: green; font-weight: bold;">Approved</small>
+                                <h3 class="text-primary mb-0"><?php 
+                                    $query = "SELECT COUNT(*) as count FROM goods_receipt_notes WHERE status = 'approved'";
+                                    $result = $conn->query($query);
+                                    echo ($result && $row = $result->fetch_assoc()) ? $row['count'] : 0;
+                                ?></h3>
+                            </div>
+                        </div>
+                    </div>
                     <div class="mt-3">
                         <a href="goods_received.php" class="btn btn-sm btn-warning">
                             <i class="fas fa-plus me-1"></i>Create GRN
@@ -248,15 +290,74 @@ foreach ($items as $item) {
             </div>
         </div>
 
+        <!-- Add Item Modal -->
+        <div class="modal fade" id="addItemModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New Item to Master List</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addItemForm">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Item Name</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Document Type</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Select Where to Use</option>
+                                    <option value="MR">Material Requisition Items</option>
+                                    <option value="GRN">Goods Receipt Note Items</option>
+                                    <option value="PO">Purchase Order Items</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="unit" class="form-label">Unit of Measurement</label>
+                                <select class="form-select" id="unit" name="unit" required>
+                                    <option value="">Select Unit</option>
+                                    <option value="PCS">Pieces (PCS)</option>
+                                    <option value="KG">Kilograms (KG)</option>
+                                    <option value="MTR">Meters (MTR)</option>
+                                    <option value="LTR">Liters (LTR)</option>
+                                    <option value="BOX">Box (BOX)</option>
+                                    <option value="PKT">Packet (PKT)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="minimum_quantity" class="form-label">Minimum Stock Level</label>
+                                <input type="number" class="form-control" id="minimum_quantity" name="minimum_quantity" min="0" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Item Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="submitItemForm()">Add to Master List</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Stock List -->
         <div class="report-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4>Stock Inventory</h4>
                 <div>
+                    <a href="item_master.php" class="btn btn-info me-2">
+                        <i class="fas fa-list me-2"></i>Item Master List
+                    </a>
                     <a href="add_stock.php" class="btn btn-success me-2">
                         <i class="fas fa-plus me-2"></i>Add New Item
                     </a>
-                    <button class="btn btn-primary" onclick="exportToCSV()">
+                    <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                        <i class="fas fa-plus me-2"></i>Add to Master List
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportToCSV()">
                         <i class="fas fa-download me-2"></i>Export to CSV
                     </button>
                 </div>
@@ -322,6 +423,40 @@ foreach ($items as $item) {
         function exportToCSV() {
             window.location.href = 'export_stock_report.php';
         }
+
+        function submitItemForm() {
+            const form = document.getElementById('addItemForm');
+            const formData = new FormData(form);
+
+            // Show loading state
+            const submitButton = document.querySelector('button[onclick="submitItemForm()"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            submitButton.disabled = true;
+
+            fetch('add_item.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Item added successfully!');
+                    location.reload();
+                } else {
+                    alert(data.message || 'Error adding item');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error adding item');
+            })
+            .finally(() => {
+                // Restore button state
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
+            });
+        }
     </script>
 </body>
-</html> 
+</html>

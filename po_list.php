@@ -202,6 +202,54 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                     </div>`;
             });
     }
+
+    function savePOStatus() {
+        const poId = document.getElementById('poId').value;
+        const status = document.getElementById('poStatus').value;
+        const remarks = document.getElementById('poRemarks').value;
+        
+        console.log('Sending data:', { poId, status, remarks }); // Debug log
+
+        // Show loading state
+        const saveButton = document.querySelector('button[onclick="savePOStatus()"]');
+        const originalText = saveButton.innerHTML;
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveButton.disabled = true;
+
+        // Send AJAX request
+        fetch('update_po_status.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `id=${encodeURIComponent(poId)}&status=${encodeURIComponent(status)}&remarks=${encodeURIComponent(remarks)}`
+        })
+        .then(response => {
+            console.log('Raw response:', response); // Debug log
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data); // Debug log
+            if (data.success) {
+                // Show success message
+                alert('Status updated successfully!');
+                
+                // Refresh the page to show updated data
+                window.location.reload();
+            } else {
+                alert(data.message || 'Error updating status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error); // Debug log
+            alert('Error updating status: ' + error.message);
+        })
+        .finally(() => {
+            // Restore button state
+            saveButton.innerHTML = originalText;
+            saveButton.disabled = false;
+        });
+    }
     </script>
 </body>
 </html> 

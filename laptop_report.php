@@ -13,15 +13,43 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Fetch all laptop records
+// Add filter processing
+$where_conditions = [];
+$params = [];
+$param_types = '';
+
+if (isset($_GET['status']) && !empty($_GET['status'])) {
+    $where_conditions[] = "l.status = ?";
+    $params[] = $_GET['status'];
+    $param_types .= 's';
+}
+
+if (isset($_GET['custodian']) && !empty($_GET['custodian'])) {
+    $where_conditions[] = "u.username LIKE ?";
+    $params[] = "%{$_GET['custodian']}%";
+    $param_types .= 's';
+}
+
+// Modify the query to include filters
 $query = "SELECT 
     l.*,
     u.username as custodian_name
     FROM laptops l
-    LEFT JOIN users u ON l.custodian_id = u.id
-    ORDER BY l.purchase_date DESC";
+    LEFT JOIN users u ON l.custodian_id = u.id";
 
-$result = $conn->query($query);
+if (!empty($where_conditions)) {
+    $query .= " WHERE " . implode(" AND ", $where_conditions);
+}
+
+$query .= " ORDER BY l.purchase_date DESC";
+
+// Execute query with prepared statement
+$stmt = $conn->prepare($query);
+if (!empty($params)) {
+    $stmt->bind_param($param_types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
 $laptops = [];
 if ($result) {
     while ($row = $result->fetch_assoc()) {
@@ -158,6 +186,32 @@ foreach ($laptops as $laptop) {
                     <h3><?php echo $sold_laptops; ?></h3>
                 </div>
             </div>
+        </div>
+
+        <!-- Add this before the table -->
+        <div class="mb-3">
+            <form class="row g-3" method="GET">
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="active" <?php echo isset($_GET['status']) && $_GET['status'] === 'active' ? 'selected' : ''; ?>>Active</option>
+                        <option value="maintenance" <?php echo isset($_GET['status']) && $_GET['status'] === 'maintenance' ? 'selected' : ''; ?>>Maintenance</option>
+                        <option value="sold" <?php echo isset($_GET['status']) && $_GET['status'] === 'sold' ? 'selected' : ''; ?>>Sold</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="custodian" class="form-control" placeholder="Search by custodian" 
+                           value="<?php echo isset($_GET['custodian']) ? htmlspecialchars($_GET['custodian']) : ''; ?>">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                    <a href="laptop_report.php" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Clear
+                    </a>
+                </div>
+            </form>
         </div>
 
         <!-- Laptop List -->

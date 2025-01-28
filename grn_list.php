@@ -201,6 +201,48 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
             window.location.href = `delete_grn.php?id=${id}`;
         }
     }
+
+    function saveGRNStatus() {
+        const grnId = document.getElementById('grnId').value;
+        const status = document.getElementById('grnStatus').value;
+        const remarks = document.getElementById('grnRemarks').value;
+        
+        // Show loading state
+        const saveButton = document.querySelector('button[onclick="saveGRNStatus()"]');
+        const originalText = saveButton.innerHTML;
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveButton.disabled = true;
+
+        // Send AJAX request
+        fetch('update_grn_status.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `id=${encodeURIComponent(grnId)}&status=${encodeURIComponent(status)}&remarks=${encodeURIComponent(remarks)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                alert('Status updated successfully!');
+                
+                // Refresh the page to show updated data
+                window.location.reload();
+            } else {
+                alert(data.message || 'Error updating status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating status: ' + error.message);
+        })
+        .finally(() => {
+            // Restore button state
+            saveButton.innerHTML = originalText;
+            saveButton.disabled = false;
+        });
+    }
     </script>
 </body>
 </html> 

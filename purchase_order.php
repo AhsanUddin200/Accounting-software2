@@ -87,7 +87,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <title>Purchase Order</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Add Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    
     <style>
         body {
             background-color: #f8f9fa;
@@ -198,6 +202,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 border: 0;
             }
         }
+
+        /* Select2 Custom Styles */
+        .select2-container--bootstrap-5 {
+            width: 100% !important;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 38px;
+            border: 1px solid #ced4da;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection--single {
+            padding-top: 4px;
+        }
+
+        .select2-results__option {
+            padding: 8px 12px;
+        }
+
+        .select2-container--bootstrap-5 .select2-search__field:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+
+        .mr-details {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .mr-number {
+            font-weight: bold;
+        }
+
+        .mr-department {
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -226,11 +267,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Material Requisition</label>
-                            <select class="form-select" name="mr_id" required>
+                            <select class="form-select select2-mr" name="mr_id" required>
                                 <option value="">Select MR Number</option>
                                 <?php foreach ($material_requisitions as $mr): ?>
-                                    <option value="<?php echo $mr['id']; ?>">
-                                        <?php echo htmlspecialchars($mr['mr_number']); ?> - <?php echo htmlspecialchars($mr['department']); ?>
+                                    <option value="<?php echo $mr['id']; ?>" 
+                                            data-department="<?php echo htmlspecialchars($mr['department']); ?>"
+                                            data-mr-number="<?php echo htmlspecialchars($mr['mr_number']); ?>">
+                                        <?php echo htmlspecialchars($mr['mr_number'] . ' - ' . $mr['department']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -303,81 +346,138 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
     </div>
 
+    <!-- Add these script tags just before closing body tag -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
     <script>
-    function loadMRItems(mrId) {
-        if (!mrId) return;
-        
-        fetch(`get_mr_items.php?mr_id=${mrId}`)
-            .then(response => response.json())
-            .then(items => {
-                const tbody = document.querySelector('#items_table tbody');
-                tbody.innerHTML = ''; // Clear existing items
-                
-                items.forEach((item, index) => {
-                    addRow(item);
-                });
-            })
-            .catch(error => console.error('Error:', error));
-    }
+        $(document).ready(function() {
+            // Initialize Select2
+            $('.select2-mr').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Search MR Number or Department...',
+                allowClear: true,
+                width: '100%',
+                templateResult: formatMR,
+                templateSelection: formatMRSelection
+            }).on('change', function() {
+                const mrId = $(this).val();
+                if (mrId) {
+                    loadMRItems(mrId);
+                } else {
+                    // Clear items table if no MR is selected
+                    const tbody = document.querySelector('#items_table tbody');
+                    tbody.innerHTML = '';
+                }
+            });
+        });
 
-    function addRow(item = null) {
-        const tbody = document.querySelector('#items_table tbody');
-        const rowCount = tbody.children.length;
-        const newRow = document.createElement('tr');
-        
-        newRow.innerHTML = `
-            <td>
-                <input type="text" class="form-control" name="items[${rowCount}][item_code]" 
-                    value="${item ? item.item_code : ''}" ${item ? 'readonly' : ''} required>
-            </td>
-            <td>
-                <input type="text" class="form-control" name="items[${rowCount}][description]" 
-                    value="${item ? item.description : ''}" ${item ? 'readonly' : ''} required>
-            </td>
-            <td>
-                <input type="number" class="form-control quantity" name="items[${rowCount}][quantity]" 
-                    value="${item ? item.quantity : ''}" min="1" required onchange="calculateTotal(this)">
-            </td>
-            <td>
-                <input type="text" class="form-control" name="items[${rowCount}][unit]" 
-                    value="${item ? item.unit : ''}" ${item ? 'readonly' : ''} required>
-            </td>
-            <td>
-                <input type="number" class="form-control unit-price" name="items[${rowCount}][unit_price]" 
-                    min="0" step="0.01" required onchange="calculateTotal(this)">
-            </td>
-            <td>
-                <input type="number" class="form-control row-total" readonly>
-            </td>
-            <td>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); updateGrandTotal();">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(newRow);
-    }
+        // Format dropdown options
+        function formatMR(mr) {
+            if (!mr.id) {
+                return mr.text;
+            }
 
-    function calculateTotal(input) {
-        const row = input.closest('tr');
-        const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-        const unitPrice = parseFloat(row.querySelector('.unit-price').value) || 0;
-        const total = quantity * unitPrice;
-        row.querySelector('.row-total').value = total.toFixed(2);
-        updateGrandTotal();
-    }
+            const $mr = $(mr.element);
+            const mrNumber = $mr.data('mr-number');
+            const department = $mr.data('department');
 
-    function updateGrandTotal() {
-        const totals = [...document.querySelectorAll('.row-total')];
-        const grandTotal = totals.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
-        document.getElementById('total_amount').value = grandTotal.toFixed(2);
-    }
+            return $(`
+                <div class="mr-details">
+                    <span class="mr-number">${mrNumber}</span>
+                    <span class="mr-department">${department}</span>
+                </div>
+            `);
+        }
 
-    // Add initial row
-    document.addEventListener('DOMContentLoaded', function() {
-        addRow();
-    });
+        // Format selected option
+        function formatMRSelection(mr) {
+            if (!mr.id) {
+                return mr.text;
+            }
+
+            const $mr = $(mr.element);
+            const mrNumber = $mr.data('mr-number');
+            const department = $mr.data('department');
+            
+            return `${mrNumber} - ${department}`;
+        }
+
+        // Existing loadMRItems function remains the same
+        function loadMRItems(mrId) {
+            if (!mrId) return;
+            
+            fetch(`get_mr_items.php?mr_id=${mrId}`)
+                .then(response => response.json())
+                .then(items => {
+                    const tbody = document.querySelector('#items_table tbody');
+                    tbody.innerHTML = ''; // Clear existing items
+                    
+                    items.forEach((item, index) => {
+                        addRow(item);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function addRow(item = null) {
+            const tbody = document.querySelector('#items_table tbody');
+            const rowCount = tbody.children.length;
+            const newRow = document.createElement('tr');
+            
+            newRow.innerHTML = `
+                <td>
+                    <input type="text" class="form-control" name="items[${rowCount}][item_code]" 
+                        value="${item ? item.item_code : ''}" ${item ? 'readonly' : ''} required>
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="items[${rowCount}][description]" 
+                        value="${item ? item.description : ''}" ${item ? 'readonly' : ''} required>
+                </td>
+                <td>
+                    <input type="number" class="form-control quantity" name="items[${rowCount}][quantity]" 
+                        value="${item ? item.quantity : ''}" min="1" required onchange="calculateTotal(this)">
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="items[${rowCount}][unit]" 
+                        value="${item ? item.unit : ''}" ${item ? 'readonly' : ''} required>
+                </td>
+                <td>
+                    <input type="number" class="form-control unit-price" name="items[${rowCount}][unit_price]" 
+                        min="0" step="0.01" required onchange="calculateTotal(this)">
+                </td>
+                <td>
+                    <input type="number" class="form-control row-total" readonly>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); updateGrandTotal();">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+        }
+
+        function calculateTotal(input) {
+            const row = input.closest('tr');
+            const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+            const unitPrice = parseFloat(row.querySelector('.unit-price').value) || 0;
+            const total = quantity * unitPrice;
+            row.querySelector('.row-total').value = total.toFixed(2);
+            updateGrandTotal();
+        }
+
+        function updateGrandTotal() {
+            const totals = [...document.querySelectorAll('.row-total')];
+            const grandTotal = totals.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+            document.getElementById('total_amount').value = grandTotal.toFixed(2);
+        }
+
+        // Add initial row
+        document.addEventListener('DOMContentLoaded', function() {
+            addRow();
+        });
     </script>
 </body>
 </html> 

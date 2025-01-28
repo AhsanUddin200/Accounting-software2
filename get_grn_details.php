@@ -118,6 +118,33 @@ try {
                 </tbody>
             </table>
         </div>
+
+        <!-- Add Status Change Section -->
+        <?php if ($grn['status'] === 'pending'): ?>
+        <div class="mt-4">
+            <h6 class="text-muted">Update Status</h6>
+            <div class="card">
+                <div class="card-body">
+                    <input type="hidden" id="grnId" value="<?php echo $grn_id; ?>">
+                    <div class="mb-3">
+                        <label for="grnStatus" class="form-label">Status</label>
+                        <select class="form-select" id="grnStatus">
+                            <option value="pending" <?php echo $grn['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                            <option value="approved" <?php echo $grn['status'] === 'approved' ? 'selected' : ''; ?>>Approved</option>
+                            <option value="rejected" <?php echo $grn['status'] === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="grnRemarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" id="grnRemarks" rows="2"><?php echo htmlspecialchars($grn['remarks'] ?? ''); ?></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="saveGRNStatus()">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     <?php
 } catch (Exception $e) {
