@@ -166,9 +166,9 @@ if (isset($_GET['voucher_number'])) {
         
         /* Add this new style for header logo */
         .header-logo {
-            width: 150px; /* Adjust size as needed */
+            width: 80px; /* Adjust size as needed */
             position: absolute;
-            left: 20px;
+            left: 40px;
             top: 20px;
         }
 
@@ -214,14 +214,14 @@ if (isset($_GET['voucher_number'])) {
 <body>
     <!-- Add watermark container before your existing content -->
     <div class="watermark-container">
-        <img src="https://dcassetcdn.com/design_img/682541/99243/99243_4267349_682541_image.jpg" class="watermark-logo" alt="School Logo">
+        <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" class="watermark-logo" alt="School Logo">
         <div class="watermark-text">Financial Management System</div>
         <div class="watermark-text">VOUCHER #<?php echo $voucher_number; ?></div>
         <div class="watermark-text"><?php echo date('d-m-Y'); ?></div>
     </div>
     
     <div class="voucher-header">
-        <img src="https://dcassetcdn.com/design_img/682541/99243/99243_4267349_682541_image.jpg" class="header-logo" alt="School Logo">
+        <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" class="header-logo" alt="School Logo">
         <h2>VOUCHER</h2>
         <div class="voucher-type <?php echo $voucher_type_class; ?>">
             <?php echo $voucher_type_text; ?>

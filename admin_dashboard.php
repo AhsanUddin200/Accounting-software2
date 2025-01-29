@@ -338,7 +338,8 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-chart-line me-2"></i>Financial Management System
+            <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" alt="FMS Logo" height="40" class="me-2">
+                <i class=" me-2"></i>Financial Management System
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -596,6 +597,9 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     </a>
                     <a href="accounting.php" class="quick-action-btn btn" style="background-color: #0066ff; color: white;">
                         <i class="fas fa-book-open me-2"></i>Accounting
+                    </a>
+                    <a href="petty_cash_ledger.php" class="quick-action-btn btn" style="background-color: #20B2AA; color: white;">
+                        <i class="fas fa-cash-register me-2"></i>Petty Cash
                     </a>
                 </div>
             </div>

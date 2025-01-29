@@ -137,6 +137,7 @@ foreach ($laptops as $laptop) {
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
+            <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" alt="FMS Logo" height="40" class="me-2">
                 <i class="fas fa-laptop me-2"></i>Laptop Report
             </a>
             <div class="ms-auto">

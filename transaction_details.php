@@ -104,6 +104,7 @@ if (isset($_GET['view'])) {
                         <thead>
                             <tr>
                                 <th>Date</th>
+                                <th>Voucher No.</th>
                                 <th>Head</th>
                                 <th>Category</th>
                                 <th>Amount</th>
@@ -117,6 +118,12 @@ if (isset($_GET['view'])) {
                             <?php while($row = $transactions->fetch_assoc()): ?>
                             <tr>
                                 <td><?php echo date('d M Y', strtotime($row['date'])); ?></td>
+                                <td>
+                                    <a href="generate_voucher.php?voucher_number=<?php echo urlencode($row['voucher_number']); ?>" 
+                                       class="btn btn-sm btn-link" title="View Voucher">
+                                        <?php echo htmlspecialchars($row['voucher_number']); ?>
+                                    </a>
+                                </td>
                                 <td><?php echo htmlspecialchars($row['head_name']); ?></td>
                                 <td><?php echo htmlspecialchars($row['category_name']); ?></td>
                                 <td>PKR <?php echo number_format($row['amount'], 2); ?></td>
