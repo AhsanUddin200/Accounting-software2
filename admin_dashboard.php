@@ -601,6 +601,14 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <a href="petty_cash_ledger.php" class="quick-action-btn btn" style="background-color: #20B2AA; color: white;">
                         <i class="fas fa-cash-register me-2"></i>Petty Cash
                     </a>
+                    <!-- <?php if (in_array($_SESSION['role'], ['admin', 'accountant'])): ?>
+                        <a href="manage_ledger_requests.php" class="quick-action-btn btn btn-info">
+                            <i class="fas fa-tasks me-2"></i>Manage Ledger Requests
+                        </a>
+                    <?php endif; ?> -->
+                    <a href="request_ledger_head.php" class="quick-action-btn btn btn-success">
+                        <i class="fas fa-plus-circle me-2"></i>Request New Ledger Head
+                    </a>
                 </div>
             </div>
         </div>

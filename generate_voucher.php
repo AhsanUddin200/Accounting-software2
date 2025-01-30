@@ -209,7 +209,21 @@ if (isset($_GET['voucher_number'])) {
         .unknown-voucher {
             background-color: #718096;
         }
+
+        .no-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <!-- Add watermark container before your existing content -->
@@ -229,6 +243,14 @@ if (isset($_GET['voucher_number'])) {
         <p>Voucher #: <?php echo $voucher_prefix . substr($voucher_number, 2); ?></p>
         <p>Date: <?php echo date('d M Y', strtotime($header['date'])); ?></p>
         <p>Description: <?php echo htmlspecialchars($header['description']); ?></p>
+    </div>
+    
+    <!-- Add this right after the voucher header section -->
+    <div class="text-end mb-3 no-print">
+        <button onclick="window.print();" class="btn btn-primary">
+            <i class="fas fa-print me-2"></i>Print Voucher
+        </button>
+       
     </div>
     
     <table class="details-table">
