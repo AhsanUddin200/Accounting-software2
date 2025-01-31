@@ -9,20 +9,21 @@ ini_set('display_errors', 1);
 // Handle both new request submission and status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['submit_request'])) {
-        // Handle new request submission
+        // Handle new request submission    
         $head_name = $_POST['head_name'] ?? '';
+        $category = $_POST['category'] ?? '';
         $description = $_POST['description'] ?? '';
         $user_id = $_SESSION['user_id'];
         
-        if (empty($head_name) || empty($description)) {
+        if (empty($head_name) || empty($category) || empty($description)) {
             $_SESSION['error'] = "Please fill all fields!";
         } else {
             $sql = "INSERT INTO ledger_head_requests 
-                    (user_id, requested_head_name, description, status, requested_date) 
-                    VALUES (?, ?, ?, 'pending', NOW())";
+                    (user_id, requested_head_name, category, description, status, requested_date) 
+                    VALUES (?, ?, ?, ?, 'pending', NOW())";
             
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("iss", $user_id, $head_name, $description);
+            $stmt->bind_param("isss", $user_id, $head_name, $category, $description);
             
             if ($stmt->execute()) {
                 $_SESSION['success'] = "Request submitted successfully!";
@@ -250,21 +251,34 @@ $requests_result = $conn->query($requests_query);
                                 <form method="POST">
                                     <input type="hidden" name="action" value="new_request">
                                     
+                                    <!-- Main Head Selection -->
                                     <div class="mb-4">
-                                        <label class="form-label fw-bold">Ledger Head Name</label>
+                                        <label class="form-label fw-bold">Main Head</label>
                                         <div class="input-group">
                                             <span class="input-group-text">
-                                                <i class="fas fa-book"></i>
+                                                <i class="fas fa-sitemap"></i>
                                             </span>
-                                            <input type="text" 
-                                                   name="head_name" 
-                                                   class="form-control" 
-                                                   placeholder="Enter ledger head name"
-                                                   required>
+                                            <select name="head_name" id="main_head" class="form-select" required>
+                                                <option value="">Select Main Head</option>
+                                                <?php
+                                                $sql = "SELECT id, name FROM accounting_heads ORDER BY name";
+                                                $result = $conn->query($sql);
+                                                while ($row = $result->fetch_assoc()) {
+                                                    echo "<option value='" . htmlspecialchars($row['name']) . "'>" . htmlspecialchars($row['name']) . "</option>";
+                                                }
+                                                ?>
+                                            </select>
                                         </div>
-                                        <div class="help-text">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Enter a clear and descriptive name for the ledger head
+                                    </div>
+
+                                    <!-- Category Selection -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Category</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-folder"></i>
+                                            </span>
+                                            <input type="text" name="category" class="form-control" placeholder="Enter Category" required>
                                         </div>
                                     </div>
 
@@ -315,42 +329,25 @@ $requests_result = $conn->query($requests_query);
                                         <tbody>
                                             <?php while ($row = $requests_result->fetch_assoc()): ?>
                                             <tr>
-                                                <td>
-                                                    <i class="fas fa-user me-2 text-muted"></i>
-                                                    <?php echo htmlspecialchars($row['requester']); ?>
-                                                </td>
+                                                <td><?php echo htmlspecialchars($row['requester']); ?></td>
                                                 <td><?php echo htmlspecialchars($row['requested_head_name']); ?></td>
                                                 <td><?php echo htmlspecialchars($row['description']); ?></td>
-                                                <td>
-                                                    <span class="status-badge status-<?php echo $row['status']; ?>">
-                                                        <?php echo ucfirst($row['status']); ?>
-                                                    </span>
+                                                <td id="status-<?php echo $row['id']; ?>">
+                                                    <?php if($row['status'] == 'pending'): ?>
+                                                        <span class="badge bg-warning">Pending</span>
+                                                    <?php endif; ?>
                                                 </td>
-                                                <td>
-                                                    <i class="far fa-calendar-alt me-2 text-muted"></i>
-                                                    <?php echo date('d M Y', strtotime($row['requested_date'])); ?>
-                                                </td>
-                                                <td>
-                                                    <?php if ($row['status'] === 'pending'): ?>
-                                                    <form method="POST" class="d-inline">
-                                                        <input type="hidden" name="action" value="approve">
-                                                        <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
-                                                        <button type="submit" name="status" value="approved" 
-                                                                class="btn btn-success btn-sm action-btn" 
-                                                                title="Approve">
+                                                <td><?php echo date('d M Y', strtotime($row['requested_date'])); ?></td>
+                                                <td id="actions-<?php echo $row['id']; ?>">
+                                                    <?php if($row['status'] == 'pending'): ?>
+                                                        <button class="btn btn-success btn-sm approve-btn" data-id="<?php echo $row['id']; ?>" 
+                                                                onclick="updateStatus(<?php echo $row['id']; ?>, 'approve')">
                                                             <i class="fas fa-check"></i>
                                                         </button>
-                                                        <button type="submit" name="status" value="reject" 
-                                                                class="btn btn-danger btn-sm action-btn" 
-                                                                title="Reject">
+                                                        <button class="btn btn-danger btn-sm reject-btn" data-id="<?php echo $row['id']; ?>" 
+                                                                onclick="updateStatus(<?php echo $row['id']; ?>, 'reject')">
                                                             <i class="fas fa-times"></i>
                                                         </button>
-                                                    </form>
-                                                    <?php else: ?>
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-user-check me-1"></i>
-                                                        <?php echo htmlspecialchars($row['processor']); ?>
-                                                    </small>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
@@ -368,6 +365,7 @@ $requests_result = $conn->query($requests_query);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         // Auto-dismiss alerts after 5 seconds
         window.setTimeout(function() {
@@ -376,6 +374,85 @@ $requests_result = $conn->query($requests_query);
                 bsAlert.close();
             });
         }, 5000);
+
+        $(document).ready(function() {
+            // Debug log to check if jQuery is working
+            console.log('jQuery loaded');
+            
+            $('#main_head').change(function() {
+                var headId = $(this).val();
+                console.log('Selected head ID:', headId); // Debug log
+                
+                if(headId) {
+                    $.ajax({
+                        url: 'fetch_categories.php',
+                        type: 'POST',
+                        data: { head_id: headId },
+                        beforeSend: function() {
+                            console.log('Sending AJAX request...'); // Debug log
+                        },
+                        success: function(response) {
+                            console.log('Response received:', response); // Debug log
+                            $('#category_select').html(response);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('AJAX Error:', error);
+                            $('#category_select').html('<option value="">Error loading categories</option>');
+                        }
+                    });
+                } else {
+                    $('#category_select').html('<option value="">Select Main Head First</option>');
+                }
+            });
+        });
+
+        function updateStatus(requestId, action) {
+            if(!confirm('Are you sure you want to ' + action + ' this request?')) {
+                return;
+            }
+
+            // Debug ke liye
+            console.log('Sending request:', requestId, action);
+
+            $.ajax({
+                url: 'update_status.php',
+                type: 'POST',
+                dataType: 'json',  // Specify expected response type
+                data: {
+                    request_id: requestId,
+                    action: action
+                },
+                success: function(response) {
+                    console.log('Response received:', response);  // Debug ke liye
+                    
+                    if(response.success) {
+                        // Update the status badge
+                        var badge = action === 'approve' ? 
+                            '<span class="badge bg-success">Approved</span>' : 
+                            '<span class="badge bg-danger">Rejected</span>';
+                        
+                        $('#status-' + requestId).html(badge);
+                        
+                        // Remove action buttons
+                        $('#actions-' + requestId).empty();
+                        
+                        // Show success message
+                        alert('Request has been ' + action + 'd successfully');
+                        
+                        // Refresh the page
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (response.message || 'Failed to update status'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);  // Debug ke liye
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    alert('Failed to process request. Please try again.');
+                }
+            });
+        }
     </script>
 </body>
 </html> 

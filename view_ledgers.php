@@ -12,7 +12,19 @@ $categories_query = "SELECT
     FROM accounting_heads ah
     LEFT JOIN account_categories ac ON ac.head_id = ah.id
     ORDER BY ah.display_order, ac.name";
+
+// For debugging
+error_log("Categories Query: " . $categories_query);
 $categories = $conn->query($categories_query);
+if (!$categories) {
+    error_log("Query Error: " . $conn->error);
+}
+
+// Debug the results
+while ($row = $categories->fetch_assoc()) {
+    error_log("Category Row: " . print_r($row, true));
+}
+$categories->data_seek(0); // Reset the pointer after debugging
 
 // Main ledger query for selected category
 if (isset($_GET['category_id'])) {
@@ -114,10 +126,12 @@ if (isset($_GET['category_id'])) {
                             <div class="list-group list-group-flush">
                 <?php endif; ?>
                 
-                <a href="?category_id=<?php echo $cat['category_id']; ?>" 
-                   class="list-group-item list-group-item-action">
-                    <?php echo htmlspecialchars($cat['category_name']); ?>
-                </a>
+                <?php if($cat['category_id']): // Only show if category exists ?>
+                    <a href="?category_id=<?php echo $cat['category_id']; ?>" 
+                       class="list-group-item list-group-item-action">
+                        <?php echo htmlspecialchars($cat['category_name']); ?>
+                    </a>
+                <?php endif; ?>
                 
                 <?php endwhile; ?>
                 <?php if($current_head != '') echo '</div></div></div>'; ?>
