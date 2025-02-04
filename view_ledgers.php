@@ -58,11 +58,14 @@ if (isset($_GET['category_id'])) {
         t.voucher_number,
         t.type as transaction_type,
         ah.name as head_name,
-        ac.name as category_name
+        ac.name as category_name,
+        cc.code as cost_center_code,
+        cc.name as cost_center_name
         FROM ledgers l
         JOIN transactions t ON l.transaction_id = t.id
         JOIN accounting_heads ah ON t.head_id = ah.id
         JOIN account_categories ac ON t.category_id = ac.id
+        LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
         WHERE t.category_id = ?";
 
     // Add date filters if provided
@@ -84,6 +87,11 @@ if (isset($_GET['category_id'])) {
     // Add account type filter
     if (!empty($_GET['account_type'])) {
         $query .= " AND ah.name = '" . $conn->real_escape_string($_GET['account_type']) . "'";
+    }
+
+    // Add cost center filter
+    if (!empty($_GET['cost_center'])) {
+        $query .= " AND t.cost_center_id = " . intval($_GET['cost_center']);
     }
 
     // Change ORDER BY to ascending order
@@ -208,6 +216,23 @@ if (isset($_GET['category_id'])) {
                             <input type="text" class="form-control" id="toVoucher" name="toVoucher" placeholder="e.g., INC202501999">
                         </div>
 
+                        <!-- Cost Center Filter -->
+                        <div class="col-md-3">
+                            <label class="form-label">Cost Center</label>
+                            <select name="cost_center" class="form-select">
+                                <option value="">All Cost Centers</option>
+                                <?php
+                                $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY name";
+                                $cost_centers = $conn->query($cost_centers_query);
+                                while ($center = $cost_centers->fetch_assoc()):
+                                ?>
+                                    <option value="<?php echo $center['id']; ?>" 
+                                        <?php echo (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
 
                         <div class="col-md-12 d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
@@ -227,6 +252,7 @@ if (isset($_GET['category_id'])) {
                                     <th>LEDGER CODE</th>
                                     <th>DATE</th>
                                     <th>VOUCHER NO.</th>
+                                    <th>COST CENTER</th>
                                     <th>DESCRIPTION</th>
                                     <th class="text-end">DEBIT (PKR)</th>
                                     <th class="text-end">CREDIT (PKR)</th>
@@ -251,6 +277,7 @@ if (isset($_GET['category_id'])) {
                                         <td><?php echo htmlspecialchars($row['ledger_code']); ?></td>
                                         <td><?php echo date('d M Y', strtotime($row['date'])); ?></td>
                                         <td><?php echo htmlspecialchars($row['voucher_number']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']); ?></td>
                                         <td><?php echo htmlspecialchars($row['description']); ?></td>
                                         <td class="text-end">
                                             <?php echo $row['debit'] ? formatCurrency($row['debit']) : '-'; ?>

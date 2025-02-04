@@ -283,6 +283,10 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
             transition: all 0.3s ease;
             border: none;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 200px;
+            text-align: center;
+            flex: 1 1 0;
+            max-width: calc(25% - 1rem);
         }
 
         .quick-action-btn:hover {
@@ -330,6 +334,12 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
             .stat-card {
                 margin-bottom: 1rem;
             }
+        }
+
+        .d-flex.gap-3 {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
         }
     </style>
 </head>
@@ -586,32 +596,36 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <i class="fas fa-bolt me-2"></i>Quick Actions
                 </h3>
                 <div class="d-flex gap-3 flex-wrap">
-                    <a href="manage_salaries.php" class="quick-action-btn btn btn-primary">
+                   
+                    <a href="manage_salaries.php" class="quick-action-btn btn btn-primary flex-fill">
                         <i class="fas fa-money-check-alt me-2"></i>Manage Salaries
                     </a>
-                    <a href="process_salaries.php" class="quick-action-btn btn btn-success">
+                    <a href="process_salaries.php" class="quick-action-btn btn btn-success flex-fill">
                         <i class="fas fa-tasks me-2"></i>Process Salaries
                     </a>
-                    <a href="upload_attendance.php" class="quick-action-btn btn btn-secondary">
+                    <a href="upload_attendance.php" class="quick-action-btn btn btn-secondary flex-fill">
                         <i class="fas fa-clock me-2"></i>Upload Attendance
                     </a>
-                    <a href="view_audit_logs.php" class="quick-action-btn btn btn-info">
+                    <a href="view_audit_logs.php" class="quick-action-btn btn btn-info flex-fill">
                         <i class="fas fa-history me-2"></i>View Audit Logs
                     </a>
-                    <a href="financial_reports.php" class="quick-action-btn btn btn-warning">
+                    <a href="financial_reports.php" class="quick-action-btn btn btn-warning flex-fill">
                         <i class="fas fa-chart-bar me-2"></i>Financial Reports
                     </a>
-                    <a href="accounting.php" class="quick-action-btn btn" style="background-color: #0066ff; color: white;">
+                    <a href="accounting.php" class="quick-action-btn btn flex-fill" style="background-color: #0066ff; color: white;">
                         <i class="fas fa-book-open me-2"></i>Accounting
                     </a>
-                      <!-- <?php if (in_array($_SESSION['role'], ['admin', 'accountant'])): ?>
-                        <a href="manage_ledger_requests.php" class="quick-action-btn btn btn-info">
-                            <i class="fas fa-tasks me-2"></i>Manage Ledger Requests
-                        </a>
-                        <?php endif; ?> -->
-                    <a href="request_ledger_head.php" class="quick-action-btn btn btn-success">
+                    <a href="request_ledger_head.php" class="quick-action-btn btn btn-success flex-fill">
                         <i class="fas fa-plus-circle me-2"></i>Request New Ledger Head
                     </a>
+                    <a href="cleanup_system.php" class="quick-action-btn btn btn-danger flex-fill">
+                        <i class="fas fa-trash-alt me-2"></i>System Cleanup
+                         <div class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">
+                    (use before production)
+                </div>
+                        
+                    </a>
+                    
                 </div>
             </div>
         </div>

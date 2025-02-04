@@ -52,10 +52,10 @@ while ($row = mysqli_fetch_assoc($result)) {
 // Get summary statistics
 $summary_query = "
     SELECT 
-        COUNT(*) as total_transactions,
-        AVG(amount) as avg_amount,
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expense
+        COALESCE(COUNT(*), 0) as total_transactions,
+        COALESCE(AVG(amount), 0) as avg_amount,
+        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as total_income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as total_expense
     FROM transactions
     WHERE date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
 
@@ -217,25 +217,25 @@ while ($row = mysqli_fetch_assoc($result)) {
             <div class="col-md-3">
                 <div class="analytics-card">
                     <h4>Total Transactions</h4>
-                    <p class="h3"><?= number_format($summary['total_transactions']) ?></p>
+                    <p class="h3"><?= number_format((float)$summary['total_transactions']) ?></p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="analytics-card">
                     <h4>Average Amount</h4>
-                    <p class="h3">PKR <?= number_format($summary['avg_amount'], 2) ?></p>
+                    <p class="h3">PKR <?= number_format((float)$summary['avg_amount'], 2) ?></p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="analytics-card">
                     <h4>Monthly Income</h4>
-                    <p class="h3">PKR <?= number_format($summary['total_income'], 2) ?></p>
+                    <p class="h3">PKR <?= number_format((float)$summary['total_income'], 2) ?></p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="analytics-card">
                     <h4>Monthly Expenses</h4>
-                    <p class="h3">PKR <?= number_format($summary['total_expense'], 2) ?></p>
+                    <p class="h3">PKR <?= number_format((float)$summary['total_expense'], 2) ?></p>
                 </div>
             </div>
         </div>
