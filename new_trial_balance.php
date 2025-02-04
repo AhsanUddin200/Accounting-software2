@@ -17,27 +17,26 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 $from_date = $_GET['from_date'] ?? date('Y-m-01'); // First day of current month
 $to_date = $_GET['to_date'] ?? date('Y-m-t');      // Last day of current month
 
-// Query to get final balances for each ledger
+// Update the query to only fetch accounts with transactions
 $query = "SELECT 
     ah.name as head_name,
     ac.name as category_name,
-    t.type as account_type,
-    SUM(l.debit) as total_debit,
-    SUM(l.credit) as total_credit,
-    CASE 
-        WHEN SUM(l.debit) > SUM(l.credit) THEN SUM(l.debit) - SUM(l.credit)
+    COALESCE(SUM(CASE 
+        WHEN t.type IN ('debit', 'asset', 'expense') 
+        THEN t.amount 
         ELSE 0 
-    END as debit_balance,
-    CASE 
-        WHEN SUM(l.credit) > SUM(l.debit) THEN SUM(l.credit) - SUM(l.debit)
+    END), 0) as debit,
+    COALESCE(SUM(CASE 
+        WHEN t.type IN ('credit', 'liability', 'income', 'equity') 
+        THEN t.amount 
         ELSE 0 
-    END as credit_balance
-    FROM ledgers l
-    JOIN transactions t ON l.transaction_id = t.id
+    END), 0) as credit
+    FROM transactions t
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
-    WHERE l.date BETWEEN ? AND ?
-    GROUP BY ah.name, ac.name, t.type
+    WHERE t.date BETWEEN ? AND ?
+    GROUP BY ah.name, ac.name
+    HAVING debit > 0 OR credit > 0
     ORDER BY ah.display_order, ac.name";
 
 $stmt = $conn->prepare($query);
@@ -57,8 +56,8 @@ while ($row = $result->fetch_assoc()) {
         $trial_balance[$head_name] = [];
     }
     $trial_balance[$head_name][] = $row;
-    $total_debit += $row['debit_balance'];
-    $total_credit += $row['credit_balance'];
+    $total_debit += $row['debit'];
+    $total_credit += $row['credit'];
 }
 
 // Check if debits and credits are balanced
@@ -238,13 +237,12 @@ $net_balance = $total_debit - $total_credit;
                             <tr>
                                 <td class="ps-4">
                                     <?php echo htmlspecialchars($row['category_name']); ?>
-                                    <small class="text-muted">(<?php echo htmlspecialchars($row['account_type']); ?>)</small>
                                 </td>
                                 <td class="amount-column">
-                                    <?php echo $row['debit_balance'] > 0 ? number_format($row['debit_balance'], 2) : '-'; ?>
+                                    <?php echo $row['debit'] > 0 ? number_format($row['debit'], 2) : '-'; ?>
                                 </td>
                                 <td class="amount-column">
-                                    <?php echo $row['credit_balance'] > 0 ? number_format($row['credit_balance'], 2) : '-'; ?>
+                                    <?php echo $row['credit'] > 0 ? number_format($row['credit'], 2) : '-'; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

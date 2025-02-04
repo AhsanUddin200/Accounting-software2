@@ -364,10 +364,19 @@ foreach ($items as $item) {
                 </div>
             </div>
             
+            <div class="mb-3">
+                <button type="button" class="btn btn-secondary" onclick="printSelectedLabels()">
+                    <i class="fas fa-print me-2"></i>Print Selected Labels
+                </button>
+            </div>
+
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-striped">
                     <thead>
                         <tr>
+                            <th>
+                                <input type="checkbox" id="selectAll" onchange="toggleAllCheckboxes(this)">
+                            </th>
                             <th>Item Code</th>
                             <th>Name</th>
                             <th>Category</th>
@@ -385,6 +394,9 @@ foreach ($items as $item) {
                             <?php foreach ($items as $item): ?>
                                 <tr class="<?php echo $item['quantity'] == 0 ? 'table-danger' : 
                                     ($item['quantity'] <= $item['minimum_quantity'] ? 'table-warning' : ''); ?>">
+                                    <td>
+                                        <input type="checkbox" name="print_items[]" value="<?php echo $item['id']; ?>">
+                                    </td>
                                     <td><?php echo htmlspecialchars($item['item_code']); ?></td>
                                     <td><?php echo htmlspecialchars($item['name']); ?></td>
                                     <td><?php echo htmlspecialchars($item['category']); ?></td>
@@ -456,6 +468,24 @@ foreach ($items as $item) {
                 // Restore button state
                 submitButton.innerHTML = originalText;
                 submitButton.disabled = false;
+            });
+        }
+
+        function printSelectedLabels() {
+            const selectedItems = document.querySelectorAll('input[name="print_items[]"]:checked');
+            if (selectedItems.length === 0) {
+                alert('Please select items to print labels for');
+                return;
+            }
+            
+            const ids = Array.from(selectedItems).map(cb => cb.value).join(',');
+            window.open(`print_item_labels.php?ids=${ids}`, '_blank');
+        }
+
+        function toggleAllCheckboxes(source) {
+            const checkboxes = document.querySelectorAll('input[name="print_items[]"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = source.checked;
             });
         }
     </script>

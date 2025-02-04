@@ -71,6 +71,8 @@ if (isset($_GET['voucher_number'])) {
         l.ledger_code,
         ah.name as head_name,
         ac.name as category_name,
+        cc.code as cost_center_code,
+        cc.name as cost_center_name,
         l.debit,
         l.credit,
         u.username as created_by,
@@ -79,6 +81,7 @@ if (isset($_GET['voucher_number'])) {
         JOIN ledgers l ON t.id = l.transaction_id
         JOIN accounting_heads ah ON t.head_id = ah.id
         JOIN account_categories ac ON t.category_id = ac.id
+        LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
         JOIN users u ON t.user_id = u.id
         WHERE t.voucher_number = ?
         ORDER BY l.id ASC";
@@ -259,6 +262,7 @@ if (isset($_GET['voucher_number'])) {
                 <th>Ledger Code</th>
                 <th>Account Head</th>
                 <th>Category</th>
+                <th>Cost Center</th>
                 <th>Description</th>
                 <th>Debit (PKR)</th>
                 <th>Credit (PKR)</th>
@@ -277,6 +281,13 @@ if (isset($_GET['voucher_number'])) {
                 <td><?php echo $row['ledger_code']; ?></td>
                 <td><?php echo $row['head_name']; ?></td>
                 <td><?php echo $row['category_name']; ?></td>
+                <td><?php 
+                    if (!empty($row['cost_center_code']) && !empty($row['cost_center_name'])) {
+                        echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']);
+                    } else {
+                        echo '-';
+                    }
+                ?></td>
                 <td><?php echo htmlspecialchars($row['description']); ?></td>
                 <td class="text-end"><?php echo formatCurrency($row['debit']); ?></td>
                 <td class="text-end"><?php echo formatCurrency($row['credit']); ?></td>
@@ -285,7 +296,7 @@ if (isset($_GET['voucher_number'])) {
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="3">Total</th>
+                <th colspan="4">Total</th>
                 <th class="text-end"></th>
                 <th class="text-end"><?php echo formatCurrency($total_debit); ?></th>
                 <th class="text-end"><?php echo formatCurrency($total_credit); ?></th>

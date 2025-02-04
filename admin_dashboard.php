@@ -383,18 +383,24 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         </a>
                     </li>
                     
-                       <li class="nav-item">
+                    <li class="nav-item">
                         <a class="nav-link" href="stock_report.php">
                             <i class="fas fa-boxes me-1"></i> Stock
                         </a>
                     </li>
 
+                    <!-- Add Analytics Dashboard Button -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="analytics_dashboard.php">
+                            <i class="fas fa-chart-line me-1"></i> Analytics
+                        </a>
+                    </li>
 
                     <li class="nav-item">
-                    <a class="nav-link" href="view_ledgers.php">
-                        <i class="fas fa-book"></i> View Ledgers
-                    </a>
-                </li>
+                        <a class="nav-link" href="view_ledgers.php">
+                            <i class="fas fa-book"></i> View Ledgers
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="upload_attendance.php">
                             <i class="fas fa-clock me-1"></i> Upload Attendance

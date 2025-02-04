@@ -16,14 +16,16 @@ $heads = $conn->query($heads_query);
 $categories_query = "SELECT * FROM account_categories ORDER BY name";
 $categories = $conn->query($categories_query);
 
-// Update the query to include voucher_number
+// Update the query to include cost center
 $query = "SELECT DISTINCT 
     t.id, 
     t.date, 
     t.voucher_number,
     l.ledger_code, 
     ah.name as head_name, 
-    ac.name as category_name, 
+    ac.name as category_name,
+    cc.code as cost_center_code,
+    cc.name as cost_center_name, 
     t.type, 
     t.amount, 
     t.description, 
@@ -31,6 +33,7 @@ $query = "SELECT DISTINCT
     FROM transactions t
     LEFT JOIN accounting_heads ah ON t.head_id = ah.id
     LEFT JOIN account_categories ac ON t.category_id = ac.id
+    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
     LEFT JOIN users u ON t.user_id = u.id
     LEFT JOIN ledgers l ON t.id = l.transaction_id
     WHERE 1=1";
@@ -55,6 +58,11 @@ if (!empty($_GET['to_date'])) {
 if (!empty($_GET['voucher_number'])) {
     $query .= " AND t.voucher_number LIKE '%" . 
               $conn->real_escape_string($_GET['voucher_number']) . "%'";
+}
+
+// Add cost center filter
+if (!empty($_GET['cost_center'])) {
+    $query .= " AND t.cost_center_id = " . intval($_GET['cost_center']);
 }
 
 // Group by transaction ID to prevent duplicates

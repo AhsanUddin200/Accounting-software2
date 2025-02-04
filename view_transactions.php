@@ -52,6 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
         $params[] = $_GET['end_date'];
         $types .= "ss";
     }
+
+    // Filter by cost center
+    if (!empty($_GET['cost_center'])) {
+        $where_clauses[] = "transactions.cost_center_id = ?";
+        $params[] = $_GET['cost_center'];
+        $types .= "i";
+    }
 }
 
 // Build the query
@@ -312,6 +319,23 @@ if (isset($_GET['delete'])) {
                         <label class="form-label">End Date</label>
                         <input type="date" name="end_date" class="form-control" 
                                value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : ''; ?>">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Cost Center</label>
+                        <select name="cost_center" class="form-select">
+                            <option value="">All Cost Centers</option>
+                            <?php
+                            $cost_centers_query = "SELECT id, code, name FROM cost_centers WHERE status = 'active' ORDER BY name";
+                            $cost_centers = $conn->query($cost_centers_query);
+                            while ($center = $cost_centers->fetch_assoc()):
+                            ?>
+                                <option value="<?php echo $center['id']; ?>" 
+                                    <?php echo (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
                     </div>
 
                     <div class="col-md-2 d-flex align-items-end">

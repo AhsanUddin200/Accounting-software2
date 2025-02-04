@@ -83,6 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $credit_description = $_POST['credit_description'] ?? [];
     $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
     $user_id = $_SESSION['user_id'];
+    $cost_center_ids = $_POST['cost_center_id'] ?? [];
 
     try {
         // Validate total debits equals total credits
@@ -107,13 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $debit_type = getTypeFromHead($debit_head_ids[$i], $conn);
             
-            $debit_sql = "INSERT INTO transactions (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $debit_sql = "INSERT INTO transactions (user_id, head_id, category_id, cost_center_id, amount, type, date, description, voucher_number) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt_debit = $conn->prepare($debit_sql);
-            $stmt_debit->bind_param("iiidssss", 
+            $stmt_debit->bind_param("iiiidssss", 
                 $user_id,
                 $debit_head_ids[$i],
                 $debit_category_ids[$i],
+                $cost_center_ids[$i],
                 $debit_amounts[$i],
                 $debit_type,
                 $date,
@@ -140,13 +142,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $credit_type = getTypeFromHead($credit_head_ids[$i], $conn);
             
-            $credit_sql = "INSERT INTO transactions (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $credit_sql = "INSERT INTO transactions (user_id, head_id, category_id, cost_center_id, amount, type, date, description, voucher_number) 
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt_credit = $conn->prepare($credit_sql);
-            $stmt_credit->bind_param("iiidssss", 
+            $stmt_credit->bind_param("iiiidssss", 
                 $user_id,
                 $credit_head_ids[$i],
                 $credit_category_ids[$i],
+                $cost_center_ids[$i],
                 $credit_amounts[$i],
                 $credit_type,
                 $date,
@@ -360,6 +363,27 @@ function generateLedgerCode($head_id, $conn) {
                             <div class="form-group">
                                 <label>Description</label>
                                 <textarea name="description" class="form-control" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cost Center -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="form-group">    
+                                <label>Cost Center</label>
+                                <select name="cost_center_id[]" class="form-select">
+                                    <option value="">Select Cost Center</option>
+                                    <?php
+                                    $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY name";
+                                    $cost_centers = $conn->query($cost_centers_query);
+                                    while ($center = $cost_centers->fetch_assoc()):
+                                    ?>
+                                        <option value="<?php echo $center['id']; ?>">
+                                            <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                                        </option>
+                                    <?php endwhile; ?>
+                                </select>
                             </div>
                         </div>
                     </div>

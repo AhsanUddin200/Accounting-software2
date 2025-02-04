@@ -40,16 +40,19 @@ class IncomeStatement {
     private function getOperatingExpensesData() {
         $query = "SELECT 
             ac.name as category_name,
+            cc.code as cost_center_code,
+            cc.name as cost_center_name,
             SUM(l.debit) as debit,
             SUM(l.credit) as credit
             FROM transactions t
             JOIN ledgers l ON t.id = l.transaction_id
             JOIN account_categories ac ON t.category_id = ac.id
+            LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
             WHERE t.type = 'expense' 
             AND ac.name NOT IN ('Interest Expense', 'Depreciation', 'Tax Expense')
             AND t.date BETWEEN ? AND ?
-            GROUP BY ac.name
-            ORDER BY ac.name";
+            GROUP BY ac.name, cc.code, cc.name
+            ORDER BY ac.name, cc.code";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("ss", $this->from_date, $this->to_date);
