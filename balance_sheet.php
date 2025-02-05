@@ -14,70 +14,108 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Get date from URL parameters or set default to current date
+// Get date and cost center from URL parameters or set defaults
 $as_of_date = $_GET['as_of_date'] ?? date('Y-m-d');
+$cost_center_id = $_GET['cost_center'] ?? '';
 
-// Query to get assets
+// Query for assets with cost center
 $assets_query = "
     SELECT 
         ah.name as head_name,
         ac.name as category_name,
+        cc.code as cost_center_code,
+        cc.name as cost_center_name,
         SUM(l.debit) - SUM(l.credit) as balance
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
+    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
     WHERE t.type = 'asset' 
-    AND t.date <= ?
-    GROUP BY ah.name, ac.name
-    HAVING balance != 0
-    ORDER BY ah.name, ac.name";
+    AND t.date <= ?";
+
+// Add cost center filter if selected
+if (!empty($cost_center_id)) {
+    $assets_query .= " AND t.cost_center_id = ?";
+}
+
+$assets_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
+                   HAVING balance != 0
+                   ORDER BY ah.name, ac.name, cc.code";
 
 // Query to get liabilities
 $liabilities_query = "
     SELECT 
         ah.name as head_name,
         ac.name as category_name,
+        cc.code as cost_center_code,
+        cc.name as cost_center_name,
         SUM(l.credit) - SUM(l.debit) as balance
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
+    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
     WHERE t.type = 'liability'
-    AND t.date <= ?
-    GROUP BY ah.name, ac.name
-    HAVING balance != 0
-    ORDER BY ah.name, ac.name";
+    AND t.date <= ?";
+
+if (!empty($cost_center_id)) {
+    $liabilities_query .= " AND t.cost_center_id = ?";
+}
+
+$liabilities_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
+                       HAVING balance != 0
+                       ORDER BY ah.name, ac.name, cc.code";
 
 // Query to get equity
 $equity_query = "
     SELECT 
         ah.name as head_name,
         ac.name as category_name,
+        cc.code as cost_center_code,
+        cc.name as cost_center_name,
         SUM(l.credit) - SUM(l.debit) as balance
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
-    WHERE t.type = 'equity'
-    AND t.date <= ?
-    GROUP BY ah.name, ac.name
-    HAVING balance != 0
-    ORDER BY ah.name, ac.name";
+    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
+    WHERE t.type = 'equity' 
+    AND t.date <= ?";
 
-// Prepare and execute queries
+if (!empty($cost_center_id)) {
+    $equity_query .= " AND t.cost_center_id = ?";
+}
+
+$equity_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
+                   HAVING balance != 0
+                   ORDER BY ah.name, ac.name, cc.code";
+
+// Prepare and execute queries with proper parameter binding
 $stmt = $conn->prepare($assets_query);
-$stmt->bind_param("s", $as_of_date);
+if (!empty($cost_center_id)) {
+    $stmt->bind_param("si", $as_of_date, $cost_center_id);
+} else {
+    $stmt->bind_param("s", $as_of_date);
+}
 $stmt->execute();
 $assets = $stmt->get_result();
 
 $stmt = $conn->prepare($liabilities_query);
-$stmt->bind_param("s", $as_of_date);
+if (!empty($cost_center_id)) {
+    $stmt->bind_param("si", $as_of_date, $cost_center_id);
+} else {
+    $stmt->bind_param("s", $as_of_date);
+}
 $stmt->execute();
 $liabilities = $stmt->get_result();
 
 $stmt = $conn->prepare($equity_query);
-$stmt->bind_param("s", $as_of_date);
+if (!empty($cost_center_id)) {
+    $stmt->bind_param("si", $as_of_date, $cost_center_id);
+} else {
+    $stmt->bind_param("s", $as_of_date);
+}
 $stmt->execute();
 $equity = $stmt->get_result();
 
@@ -234,6 +272,22 @@ $total_equity = 0;
                         <input type="date" name="as_of_date" class="form-control" 
                                value="<?php echo htmlspecialchars($as_of_date); ?>">
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cost Center:</label>
+                        <select name="cost_center" class="form-select">
+                            <option value="">All Cost Centers</option>
+                            <?php
+                            $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
+                            $cost_centers = $conn->query($cost_centers_query);
+                            while ($center = $cost_centers->fetch_assoc()):
+                                $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
+                            ?>
+                                <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
+                                    <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary">Apply</button>
                     </div>
@@ -263,7 +317,13 @@ $total_equity = 0;
                             <tr>
                                 <td class="ps-4"><?php echo htmlspecialchars($row['category_name']); ?></td>
                                 <td class="amount-column">
-                                    <?php echo number_format(abs($row['balance']), 2); ?>
+                                    <?php 
+                                    if (!empty($row['cost_center_code']) && !empty($row['cost_center_name'])) {
+                                        echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']);
+                                    } else {
+                                        echo '-';
+                                    }
+                                    ?>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
@@ -294,7 +354,13 @@ $total_equity = 0;
                             <tr>
                                 <td class="ps-4"><?php echo htmlspecialchars($row['category_name']); ?></td>
                                 <td class="amount-column">
-                                    <?php echo number_format(abs($row['balance']), 2); ?>
+                                    <?php 
+                                    if (!empty($row['cost_center_code']) && !empty($row['cost_center_name'])) {
+                                        echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']);
+                                    } else {
+                                        echo '-';
+                                    }
+                                    ?>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
@@ -325,7 +391,13 @@ $total_equity = 0;
                             <tr>
                                 <td class="ps-4"><?php echo htmlspecialchars($row['category_name']); ?></td>
                                 <td class="amount-column">
-                                    <?php echo number_format(abs($row['balance']), 2); ?>
+                                    <?php 
+                                    if (!empty($row['cost_center_code']) && !empty($row['cost_center_name'])) {
+                                        echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']);
+                                    } else {
+                                        echo '-';
+                                    }
+                                    ?>
                                 </td>
                             </tr>
                         <?php endwhile; ?>

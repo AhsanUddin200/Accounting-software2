@@ -279,6 +279,14 @@ function generateLedgerCode($head_id, $conn) {
                                         </select>
                                     </div>
                                 </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">    
+                                        <label>Sub Category</label>
+                                        <select name="debit_subcategory_id[]" class="form-select debit-subcategory">
+                                            <option value="">Select Category First</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Amount</label>
@@ -325,6 +333,14 @@ function generateLedgerCode($head_id, $conn) {
                                         <label>Category</label>
                                         <select name="credit_category_id[]" class="form-select credit-category" required>
                                             <option value="">Select Head First</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">    
+                                        <label>Sub Category</label>
+                                        <select name="credit_subcategory_id[]" class="form-select credit-subcategory">
+                                            <option value="">Select Category First</option>
                                         </select>
                                     </div>
                                 </div>
@@ -471,6 +487,22 @@ function generateLedgerCode($head_id, $conn) {
                 }
             }
 
+            // Function to update subcategories based on category selection
+            function updateSubcategories(categoryId, subcategorySelect) {
+                if (categoryId) {
+                    $.ajax({
+                        url: 'get_subcategories.php',
+                        type: 'GET',
+                        data: { category_id: categoryId },
+                        success: function(response) {
+                            subcategorySelect.html(response);
+                        }
+                    });
+                } else {
+                    subcategorySelect.html('<option value="">Select Category First</option>');
+                }
+            }
+
             // Add entry button handlers
             $('#add-debit').click(() => addEntry('debit'));
             $('#add-credit').click(() => addEntry('credit'));
@@ -491,6 +523,15 @@ function generateLedgerCode($head_id, $conn) {
 
             $(document).on('change', '.credit-head', function() {
                 updateCategories($(this).val(), $(this).closest('.credit-entry').find('.credit-category'));
+            });
+
+            // Category change handlers
+            $(document).on('change', '.debit-category', function() {
+                updateSubcategories($(this).val(), $(this).closest('.debit-entry').find('.debit-subcategory'));
+            });
+
+            $(document).on('change', '.credit-category', function() {
+                updateSubcategories($(this).val(), $(this).closest('.credit-entry').find('.credit-subcategory'));
             });
         });
     </script>

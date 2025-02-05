@@ -15,48 +15,58 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 // Get date range from URL parameters or set defaults
 $from_date = $_GET['from_date'] ?? date('Y-m-01'); // First day of current month
-$to_date = $_GET['to_date'] ?? date('Y-m-t');      // Last day of current month
+$to_date = $_GET['to_date'] ?? date('Y-m-d');
+$cost_center_id = $_GET['cost_center'] ?? '';
 
 // Update the query to get last closing balance for each account
-$query = "WITH ClosingBalances AS (
-    SELECT 
-        ah.name as head_name,
-        ac.name as category_name,
-        l.date,
-        -- Calculate running balance for each entry
-        SUM(l.debit - l.credit) OVER (
-            PARTITION BY ac.id 
-            ORDER BY l.date ASC, l.id ASC
-        ) as running_balance,
-        -- Get row number to identify latest entry
-        ROW_NUMBER() OVER (
-            PARTITION BY ac.id 
-            ORDER BY l.date DESC, l.id DESC
-        ) as rn
+$query = "SELECT 
+    ah.name as head_name,
+    ac.name as category_name,
+    cc.code as cost_center_code,
+    cc.name as cost_center_name,
+    t.type,
+    SUM(l.debit) as total_debit,
+    SUM(l.credit) as total_credit,
+    CASE 
+        WHEN SUM(l.debit) > SUM(l.credit) THEN SUM(l.debit) - SUM(l.credit)
+        ELSE 0 
+    END as debit_balance,
+    CASE 
+        WHEN SUM(l.credit) > SUM(l.debit) THEN SUM(l.credit) - SUM(l.debit)
+        ELSE 0 
+    END as credit_balance
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
-    WHERE l.date <= ?
-)
-SELECT 
-    head_name,
-    category_name,
-    CASE 
-        WHEN running_balance > 0 THEN ABS(running_balance)
-        ELSE 0 
-    END as debit,
-    CASE 
-        WHEN running_balance < 0 THEN ABS(running_balance)
-        ELSE 0 
-    END as credit
-FROM ClosingBalances 
-WHERE rn = 1
-    AND running_balance != 0
-ORDER BY head_name, category_name";
+    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
+    WHERE t.date BETWEEN ? AND ?";
 
+// Add cost center filter condition
+if (!empty($cost_center_id)) {
+    $query .= " AND t.cost_center_id = ?";
+}
+
+$query .= " GROUP BY ah.name, ac.name, cc.code, cc.name, t.type
+           ORDER BY 
+           CASE t.type
+               WHEN 'asset' THEN 1
+               WHEN 'liability' THEN 2
+               WHEN 'equity' THEN 3
+               WHEN 'income' THEN 4
+               WHEN 'expense' THEN 5
+           END, 
+           ah.name, ac.name";
+
+// Prepare and execute the query with proper parameter binding
 $stmt = $conn->prepare($query);
-$stmt->bind_param("s", $to_date);
+
+if (!empty($cost_center_id)) {
+    $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_id);
+} else {
+    $stmt->bind_param("ss", $from_date, $to_date);
+}
+
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -72,8 +82,8 @@ while ($row = $result->fetch_assoc()) {
         $trial_balance[$head_name] = [];
     }
     $trial_balance[$head_name][] = $row;
-    $total_debit += $row['debit'];
-    $total_credit += $row['credit'];
+    $total_debit += $row['total_debit'];
+    $total_credit += $row['total_credit'];
 }
 
 // Check if debits and credits are balanced
@@ -228,6 +238,22 @@ $net_balance = $total_debit - $total_credit;
                     <input type="date" name="to_date" class="form-control" 
                            value="<?php echo htmlspecialchars($to_date); ?>">
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cost Center:</label>
+                    <select name="cost_center" class="form-select">
+                        <option value="">All Cost Centers</option>
+                        <?php
+                        $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
+                        $cost_centers = $conn->query($cost_centers_query);
+                        while ($center = $cost_centers->fetch_assoc()):
+                            $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
+                        ?>
+                            <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
+                                <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
                 <div class="col-md-4 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary">Apply Filter</button>
                 </div>
@@ -255,10 +281,10 @@ $net_balance = $total_debit - $total_credit;
                                     <?php echo htmlspecialchars($row['category_name']); ?>
                                 </td>
                                 <td class="amount-column">
-                                    <?php echo $row['debit'] > 0 ? number_format($row['debit'], 2) : '-'; ?>
+                                    <?php echo $row['total_debit'] > 0 ? number_format($row['total_debit'], 2) : '-'; ?>
                                 </td>
                                 <td class="amount-column">
-                                    <?php echo $row['credit'] > 0 ? number_format($row['credit'], 2) : '-'; ?>
+                                    <?php echo $row['total_credit'] > 0 ? number_format($row['total_credit'], 2) : '-'; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

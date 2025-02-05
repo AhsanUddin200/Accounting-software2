@@ -3,104 +3,82 @@ require_once 'session.php';
 require_once 'db.php';
 require_once 'functions.php';
 
-// Get date range from URL parameters or set defaults
+// Check admin access
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header("Location: login.php");
+    exit();
+}
+
+// Get filter values
 $from_date = $_GET['from_date'] ?? date('Y-m-01');
-$to_date = $_GET['to_date'] ?? date('Y-m-t');
+$to_date = $_GET['to_date'] ?? date('Y-m-d');
+$cost_center_id = $_GET['cost_center'] ?? '';
 
-class IncomeStatement {
-    private $conn;
-    private $from_date;
-    private $to_date;
+// Query for income
+$income_query = "SELECT 
+    ah.name as head_name,
+    ac.name as category_name,
+    cc.code as cost_center_code,
+    cc.name as cost_center_name,
+    SUM(l.credit) - SUM(l.debit) as amount
+    FROM ledgers l
+    JOIN transactions t ON l.transaction_id = t.id
+    JOIN accounting_heads ah ON t.head_id = ah.id
+    JOIN account_categories ac ON t.category_id = ac.id
+    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
+    WHERE t.type = 'income' 
+    AND t.date BETWEEN ? AND ?";
 
-    public function __construct($conn, $from_date, $to_date) {
-        $this->conn = $conn;
-        $this->from_date = $from_date;
-        $this->to_date = $to_date;
-    }
-
-    private function getRevenueData() {
-        $query = "SELECT 
-            ac.name as category_name,
-            SUM(l.debit) as debit,
-            SUM(l.credit) as credit
-            FROM transactions t
-            JOIN ledgers l ON t.id = l.transaction_id
-            JOIN account_categories ac ON t.category_id = ac.id
-            WHERE t.type = 'income'
-            AND t.date BETWEEN ? AND ?
-            GROUP BY ac.name
-            ORDER BY ac.name";
-
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ss", $this->from_date, $this->to_date);
-        $stmt->execute();
-        return $stmt->get_result();
-    }
-
-    private function getOperatingExpensesData() {
-        $query = "SELECT 
-            ac.name as category_name,
-            cc.code as cost_center_code,
-            cc.name as cost_center_name,
-            SUM(l.debit) as debit,
-            SUM(l.credit) as credit
-            FROM transactions t
-            JOIN ledgers l ON t.id = l.transaction_id
-            JOIN account_categories ac ON t.category_id = ac.id
-            LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
-            WHERE t.type = 'expense' 
-            AND ac.name NOT IN ('Interest Expense', 'Depreciation', 'Tax Expense')
-            AND t.date BETWEEN ? AND ?
-            GROUP BY ac.name, cc.code, cc.name
-            ORDER BY ac.name, cc.code";
-
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ss", $this->from_date, $this->to_date);
-        $stmt->execute();
-        return $stmt->get_result();
-    }
-
-    private function getNonOperatingExpensesData() {
-        $query = "SELECT 
-            ac.name as category_name,
-            SUM(l.debit) as debit,
-            SUM(l.credit) as credit
-            FROM transactions t
-            JOIN ledgers l ON t.id = l.transaction_id
-            JOIN account_categories ac ON t.category_id = ac.id
-            WHERE t.type = 'expense'
-            AND ac.name IN ('Interest Expense', 'Depreciation', 'Tax Expense')
-            AND t.date BETWEEN ? AND ?
-            GROUP BY ac.name
-            ORDER BY ac.name";
-
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ss", $this->from_date, $this->to_date);
-        $stmt->execute();
-        return $stmt->get_result();
-    }
-
-    public function getData() {
-        try {
-            return [
-                'revenue' => $this->getRevenueData(),
-                'operating_expenses' => $this->getOperatingExpensesData(),
-                'non_operating_expenses' => $this->getNonOperatingExpensesData(),
-                'from_date' => $this->from_date,
-                'to_date' => $this->to_date
-            ];
-        } catch (Exception $e) {
-            throw new Exception("Error fetching data: " . $e->getMessage());
-        }
-    }
+// Add cost center filter if selected
+if (!empty($cost_center_id)) {
+    $income_query .= " AND t.cost_center_id = ?";
 }
 
-try {
-    $statement = new IncomeStatement($conn, $from_date, $to_date);
-    $data = $statement->getData();
-} catch (Exception $e) {
-    die("Error: " . $e->getMessage());
+$income_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
+                   ORDER BY ah.name, ac.name";
+
+// Query for expenses
+$expense_query = "SELECT 
+    ah.name as head_name,
+    ac.name as category_name,
+    cc.code as cost_center_code,
+    cc.name as cost_center_name,
+    SUM(l.debit) - SUM(l.credit) as amount
+    FROM ledgers l
+    JOIN transactions t ON l.transaction_id = t.id
+    JOIN accounting_heads ah ON t.head_id = ah.id
+    JOIN account_categories ac ON t.category_id = ac.id
+    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
+    WHERE t.type = 'expense' 
+    AND t.date BETWEEN ? AND ?";
+
+// Add cost center filter if selected
+if (!empty($cost_center_id)) {
+    $expense_query .= " AND t.cost_center_id = ?";
 }
+
+$expense_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
+                    ORDER BY ah.name, ac.name";
+
+// Prepare and execute income query
+$stmt = $conn->prepare($income_query);
+if (!empty($cost_center_id)) {
+    $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_id);
+} else {
+    $stmt->bind_param("ss", $from_date, $to_date);
+}
+$stmt->execute();
+$income_result = $stmt->get_result();
+
+// Prepare and execute expense query
+$stmt = $conn->prepare($expense_query);
+if (!empty($cost_center_id)) {
+    $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_id);
+} else {
+    $stmt->bind_param("ss", $from_date, $to_date);
+}
+$stmt->execute();
+$expense_result = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -398,8 +376,8 @@ try {
         <div class="header-section">
             <h1 class="page-title">Income Statement</h1>
             <p class="date-range">
-                <?php echo date('F d, Y', strtotime($data['from_date'])); ?> - 
-                <?php echo date('F d, Y', strtotime($data['to_date'])); ?>
+                <?php echo date('F d, Y', strtotime($from_date)); ?> - 
+                <?php echo date('F d, Y', strtotime($to_date)); ?>
             </p>
         </div>
 
@@ -414,13 +392,29 @@ try {
                         <label class="form-label">From Date</label>
                         <input type="date" name="from_date" 
                             class="form-control"
-                            value="<?php echo $data['from_date']; ?>">
+                            value="<?php echo $from_date; ?>">
                     </div>
                     <div class="form-group">
                         <label class="form-label">To Date</label>
                         <input type="date" name="to_date" 
                             class="form-control"
-                            value="<?php echo $data['to_date']; ?>">
+                            value="<?php echo $to_date; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cost Center</label>
+                        <select name="cost_center" class="form-control">
+                            <option value="">All Cost Centers</option>
+                            <?php
+                            $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
+                            $cost_centers = $conn->query($cost_centers_query);
+                            while ($center = $cost_centers->fetch_assoc()):
+                                $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
+                            ?>
+                                <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
+                                    <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
                     </div>
                     <div class="form-group">
                         <button type="submit" class="btn btn-primary w-full mb-2">
@@ -442,10 +436,10 @@ try {
 
         <!-- Main Content -->
         <div class="statement-card">
-            <!-- Revenue Section -->
+            <!-- Income Section -->
             <div class="table-section">
                 <div class="card-header">
-                    <h2 class="text-xl font-semibold">Revenue</h2>
+                    <h2 class="text-xl font-semibold">Income</h2>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -453,32 +447,42 @@ try {
                             <thead>
                                 <tr>
                                     <th>Category</th>
+                                    <th>Cost Center</th>
                                     <th class="text-right">Amount (PKR)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php 
-                                $total_revenue = 0;
-                                while ($row = $data['revenue']->fetch_assoc()): 
-                                    $balance = $row['credit'] - $row['debit'];
-                                    $total_revenue += $balance;
+                                $total_income = 0;
+                                while ($row = $income_result->fetch_assoc()):
+                                    $total_income += $row['amount'];
                                 ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                                        <td>
+                                            <?php 
+                                            if (!empty($row['cost_center_code']) && !empty($row['cost_center_name'])) {
+                                                echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']);
+                                            } else {
+                                                echo '-';
+                                            }
+                                            ?>
+                                        </td>
                                         <td class="amount">
-                                            <?php echo number_format(abs($balance), 2); ?>
+                                            <?php echo number_format(abs($row['amount']), 2); ?>
                                             <span class="text-sm ml-1">
-                                                <?php echo ($balance < 0) ? 'Dr' : 'Cr'; ?>
+                                                <?php echo ($row['amount'] < 0) ? 'Dr' : 'Cr'; ?>
                                             </span>
                                         </td>
                                     </tr>
-                                    <?php endwhile; ?>
+                                <?php endwhile; ?>
                                 <tr class="total-row">
-                                    <td>Total Revenue</td>
-                                    <td class="amount <?php echo $total_revenue >= 0 ? 'profit' : 'loss'; ?>">
-                                        <?php echo number_format(abs($total_revenue), 2); ?>
+                                    <td>Total Income</td>
+                                    <td></td>
+                                    <td class="amount <?php echo $total_income >= 0 ? 'profit' : 'loss'; ?>">
+                                        <?php echo number_format(abs($total_income), 2); ?>
                                         <span class="text-sm ml-1">
-                                            <?php echo ($total_revenue < 0) ? 'Dr' : 'Cr'; ?>
+                                            <?php echo ($total_income < 0) ? 'Dr' : 'Cr'; ?>
                                         </span>
                                     </td>
                                 </tr>
@@ -488,10 +492,10 @@ try {
                 </div>
             </div>
 
-            <!-- Operating Expenses Section -->
+            <!-- Expense Section -->
             <div class="table-section">
                 <div class="card-header">
-                    <h2 class="text-xl font-semibold">Operating Expenses</h2>
+                    <h2 class="text-xl font-semibold">Expenses</h2>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -499,79 +503,41 @@ try {
                             <thead>
                                 <tr>
                                     <th>Category</th>
+                                    <th>Cost Center</th>
                                     <th class="text-right">Amount (PKR)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php 
-                                $total_operating_expenses = 0;
-                                while ($row = $data['operating_expenses']->fetch_assoc()): 
-                                    $balance = $row['debit'] - $row['credit'];
-                                    $total_operating_expenses += $balance;
+                                $total_expense = 0;
+                                while ($row = $expense_result->fetch_assoc()):
+                                    $total_expense += $row['amount'];
                                 ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                                        <td>
+                                            <?php 
+                                            if (!empty($row['cost_center_code']) && !empty($row['cost_center_name'])) {
+                                                echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']);
+                                            } else {
+                                                echo '-';
+                                            }
+                                            ?>
+                                        </td>
                                         <td class="amount">
-                                            <?php echo number_format(abs($balance), 2); ?>
+                                            <?php echo number_format(abs($row['amount']), 2); ?>
                                             <span class="text-sm ml-1">
-                                                <?php echo ($balance < 0) ? 'Cr' : 'Dr'; ?>
+                                                <?php echo ($row['amount'] < 0) ? 'Cr' : 'Dr'; ?>
                                             </span>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>
                                 <tr class="total-row">
-                                    <td>Total Operating Expenses</td>
+                                    <td>Total Expenses</td>
+                                    <td></td>
                                     <td class="amount">
-                                        <?php echo number_format(abs($total_operating_expenses), 2); ?>
-                                        <span class="text-sm ml-1">
-                                            <?php echo ($total_operating_expenses < 0) ? 'Cr' : 'Dr'; ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Non-Operating Expenses Section -->
-            <div class="table-section">
-                <div class="card-header">
-                    <h2 class="text-xl font-semibold">Non-Operating Expenses</h2>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th class="text-right">Amount (PKR)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $total_non_operating_expenses = 0;
-                                while ($row = $data['non_operating_expenses']->fetch_assoc()): 
-                                    $balance = $row['debit'] - $row['credit'];
-                                    $total_non_operating_expenses += $balance;
-                                ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($row['category_name']); ?></td>
-                                        <td class="amount">
-                                            <?php echo number_format(abs($balance), 2); ?>
-                                            <span class="text-sm ml-1">
-                                                <?php echo ($balance < 0) ? 'Cr' : 'Dr'; ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                                <tr class="total-row">
-                                    <td>Total Non-Operating Expenses</td>
-                                    <td class="amount">
-                                        <?php echo number_format(abs($total_non_operating_expenses), 2); ?>
-                                        <span class="text-sm ml-1">
-                                            <?php echo ($total_non_operating_expenses < 0) ? 'Cr' : 'Dr'; ?>
-                                        </span>
+                                        <?php echo number_format(abs($total_expense), 2); ?>
+                                        <span class="text-sm ml-1">Dr</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -583,32 +549,10 @@ try {
             <!-- Summary Section -->
             <div class="card-body">
                 <div class="summary-section">
-                    <!-- Gross Profit -->
-                    <div class="summary-card">
-                        <h3 class="summary-title">Gross Profit</h3>
-                        <?php $gross_profit = $total_revenue - $total_operating_expenses; ?>
-                        <p class="summary-value <?php echo $gross_profit >= 0 ? 'profit' : 'loss'; ?>">
-                            <?php echo number_format(abs($gross_profit), 2); ?>
-                            <span class="text-sm ml-1">
-                                <?php echo ($gross_profit < 0) ? 'Dr' : 'Cr'; ?>
-                            </span>
-                        </p>
-                    </div>
-
-                    <!-- Total Expenses -->
-                    <div class="summary-card">
-                        <h3 class="summary-title">Total Expenses</h3>
-                        <?php $total_expenses = $total_operating_expenses + $total_non_operating_expenses; ?>
-                        <p class="summary-value">
-                            <?php echo number_format(abs($total_expenses), 2); ?>
-                            <span class="text-sm ml-1">Dr</span>
-                        </p>
-                    </div>
-
                     <!-- Net Income -->
                     <div class="summary-card">
                         <h3 class="summary-title">Net Income</h3>
-                        <?php $net_income = $gross_profit - $total_non_operating_expenses; ?>
+                        <?php $net_income = $total_income - $total_expense; ?>
                         <p class="summary-value <?php echo $net_income >= 0 ? 'profit' : 'loss'; ?>">
                             <?php echo number_format(abs($net_income), 2); ?>
                             <span class="text-sm ml-1">
@@ -644,7 +588,7 @@ try {
     });
 
     function exportToCSV() {
-        window.location.href = `export_income_statement.php?from_date=<?php echo $data['from_date']; ?>&to_date=<?php echo $data['to_date']; ?>`;
+        window.location.href = `export_income_statement.php?from_date=${encodeURIComponent(from_date)}&to_date=${encodeURIComponent(to_date)}&cost_center=${encodeURIComponent(cost_center_id)}`;
     }
     </script>
 </body>

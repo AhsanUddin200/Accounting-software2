@@ -596,7 +596,15 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <i class="fas fa-bolt me-2"></i>Quick Actions
                 </h3>
                 <div class="d-flex gap-3 flex-wrap">
-                   
+                    <!-- Add Manage Sub Categories button -->
+                    <a href="manage_subcategories.php" class="quick-action-btn btn btn-primary flex-fill">
+                        <i class="fas fa-sitemap me-2"></i>Manage Sub Categories
+                    </a>
+
+                    <!-- Existing buttons -->
+                    <a href="petty_cash_expense.php" class="quick-action-btn btn btn-info flex-fill">
+                        <i class="fas fa-money-bill-alt me-2"></i>Petty Cash
+                    </a>
                     <a href="manage_salaries.php" class="quick-action-btn btn btn-primary flex-fill">
                         <i class="fas fa-money-check-alt me-2"></i>Manage Salaries
                     </a>
