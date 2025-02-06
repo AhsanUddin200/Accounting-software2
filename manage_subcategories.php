@@ -115,41 +115,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $('#head_id').change(function() {
             const headId = $(this).val();
             if (headId) {
-                // Fetch categories for selected head
                 $.ajax({
                     url: 'get_categories.php',
                     type: 'GET',
                     data: { head_id: headId },
                     success: function(response) {
-                        $('#category_id').html(response);
-                        loadSubcategories();
+                        // Clear existing options first
+                        $('#category_id').empty();
+                        // Add default option
+                        $('#category_id').html('<option value="">Select Category</option>' + response);
                     }
                 });
             } else {
+                // If no head selected, show default message
                 $('#category_id').html('<option value="">Select Head First</option>');
-                $('#subcategories-list').html('');
             }
         });
 
         // When category is selected
         $('#category_id').change(function() {
-            loadSubcategories();
-        });
-
-        // Function to load subcategories
-        function loadSubcategories() {
-            const categoryId = $('#category_id').val();
+            const categoryId = $(this).val();
+            console.log('Selected category ID:', categoryId);
+            
             if (categoryId) {
                 $.ajax({
                     url: 'get_subcategories_list.php',
                     type: 'GET',
                     data: { category_id: categoryId },
                     success: function(response) {
+                        console.log('Subcategories response:', response);
                         $('#subcategories-list').html(response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
                     }
                 });
             }
-        }
+        });
     });
     </script>
 </body>

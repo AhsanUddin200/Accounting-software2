@@ -19,14 +19,17 @@ if (isset($_GET['view'])) {
         t.*,
         ah.name as head_name,
         ac.name as category_name,
+        acs.name as subcategory_name,
         u.username as added_by
         FROM transactions t
         LEFT JOIN accounting_heads ah ON t.head_id = ah.id
         LEFT JOIN account_categories ac ON t.category_id = ac.id
+        LEFT JOIN account_subcategories acs ON t.subcategory_id = acs.id
         LEFT JOIN users u ON t.user_id = u.id
         WHERE t.type = ?
         AND t.date BETWEEN ? AND ?
         ORDER BY t.date DESC";
+        
 
     $stmt = $conn->prepare($query);
     $stmt->bind_param("sss", $type, $period_start, $period_end);
@@ -107,6 +110,7 @@ if (isset($_GET['view'])) {
                                 <th>Voucher No.</th>
                                 <th>Head</th>
                                 <th>Category</th>
+                                <th>Sub Category</th>
                                 <th>Amount</th>
                                 <th>Description</th>
                                 <th>Status</th>
@@ -126,6 +130,7 @@ if (isset($_GET['view'])) {
                                 </td>
                                 <td><?php echo htmlspecialchars($row['head_name']); ?></td>
                                 <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                                <td><?php echo htmlspecialchars($row['subcategory_name'] ?? 'N/A'); ?></td>
                                 <td>PKR <?php echo number_format($row['amount'], 2); ?></td>
                                 <td><?php echo htmlspecialchars($row['description']); ?></td>
                                 <td><span class="status-badge status-original">Original</span></td>
