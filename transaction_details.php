@@ -107,7 +107,7 @@ if (isset($_GET['view'])) {
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Voucher No.</th>
+                                <th>Voucher No.</th>    
                                 <th>Head</th>
                                 <th>Category</th>
                                 <th>Sub Category</th>

@@ -75,10 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Get form data with proper validation
     $debit_head_ids = $_POST['debit_head_id'] ?? [];
     $debit_category_ids = $_POST['debit_category_id'] ?? [];
+    $debit_subcategory_ids = $_POST['debit_subcategory_id'] ?? [];
     $debit_amounts = $_POST['debit_amount'] ?? [];
     $debit_description = $_POST['debit_description'] ?? [];
     $credit_head_ids = $_POST['credit_head_id'] ?? [];
     $credit_category_ids = $_POST['credit_category_id'] ?? [];
+    $credit_subcategory_ids = $_POST['credit_subcategory_id'] ?? [];
     $credit_amounts = $_POST['credit_amount'] ?? [];
     $credit_description = $_POST['credit_description'] ?? [];
     $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
@@ -108,13 +110,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $debit_type = getTypeFromHead($debit_head_ids[$i], $conn);
             
-            $debit_sql = "INSERT INTO transactions (user_id, head_id, category_id, cost_center_id, amount, type, date, description, voucher_number) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $debit_sql = "INSERT INTO transactions (user_id, head_id, category_id, subcategory_id, cost_center_id, amount, type, date, description, voucher_number) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt_debit = $conn->prepare($debit_sql);
-            $stmt_debit->bind_param("iiiidssss", 
+            $stmt_debit->bind_param("iiiiidssss", 
                 $user_id,
                 $debit_head_ids[$i],
                 $debit_category_ids[$i],
+                $debit_subcategory_ids[$i],
                 $cost_center_ids[$i],
                 $debit_amounts[$i],
                 $debit_type,
@@ -142,13 +145,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $credit_type = getTypeFromHead($credit_head_ids[$i], $conn);
             
-            $credit_sql = "INSERT INTO transactions (user_id, head_id, category_id, cost_center_id, amount, type, date, description, voucher_number) 
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $credit_sql = "INSERT INTO transactions (user_id, head_id, category_id, subcategory_id, cost_center_id, amount, type, date, description, voucher_number) 
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt_credit = $conn->prepare($credit_sql);
-            $stmt_credit->bind_param("iiiidssss", 
+            $stmt_credit->bind_param("iiiiidssss", 
                 $user_id,
                 $credit_head_ids[$i],
                 $credit_category_ids[$i],
+                $credit_subcategory_ids[$i],
                 $cost_center_ids[$i],
                 $credit_amounts[$i],
                 $credit_type,

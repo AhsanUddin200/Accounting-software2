@@ -15,7 +15,7 @@ if (isset($_GET['category_id'])) {
     // Debug output
     error_log("Getting subcategories for category_id: " . $category_id);
     
-    $query = "SELECT sub.id, sub.name, sub.description, sub.balance, sub.created_at 
+    $query = "SELECT sub.id, sub.name, sub.description, sub.created_at 
               FROM account_subcategories sub 
               WHERE sub.category_id = ?
               ORDER BY sub.name";
@@ -31,8 +31,8 @@ if (isset($_GET['category_id'])) {
                     <tr>
                         <th>Sub Category</th>
                         <th>Description</th>
-                        <th>Balance</th>
                         <th>Created At</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>';
@@ -41,8 +41,14 @@ if (isset($_GET['category_id'])) {
             echo '<tr>
                     <td>' . htmlspecialchars($row['name']) . '</td>
                     <td>' . htmlspecialchars($row['description']) . '</td>
-                    <td>' . number_format((float)($row['balance'] ?? 0), 2) . '</td>
                     <td>' . htmlspecialchars($row['created_at']) . '</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger delete-subcategory" 
+                                data-id="' . $row['id'] . '"
+                                data-name="' . htmlspecialchars($row['name']) . '">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
                 </tr>';
         }
         

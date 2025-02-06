@@ -16,7 +16,7 @@ $heads = $conn->query($heads_query);
 $categories_query = "SELECT * FROM account_categories ORDER BY name";
 $categories = $conn->query($categories_query);
 
-// Update the query to include cost center
+// Update the query to include cost center and subcategory
 $query = "SELECT DISTINCT 
     t.id, 
     t.date, 
@@ -24,6 +24,7 @@ $query = "SELECT DISTINCT
     l.ledger_code, 
     ah.name as head_name, 
     ac.name as category_name,
+    acs.name as subcategory_name,
     cc.code as cost_center_code,
     cc.name as cost_center_name, 
     t.type, 
@@ -33,6 +34,7 @@ $query = "SELECT DISTINCT
     FROM transactions t
     LEFT JOIN accounting_heads ah ON t.head_id = ah.id
     LEFT JOIN account_categories ac ON t.category_id = ac.id
+    LEFT JOIN account_subcategories acs ON t.subcategory_id = acs.id
     LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
     LEFT JOIN users u ON t.user_id = u.id
     LEFT JOIN ledgers l ON t.id = l.transaction_id
@@ -114,6 +116,7 @@ function safe_echo($str) {
                                 <th>Voucher No.</th>
                                 <th>Head</th>
                                 <th>Category</th>
+                                <th>Sub Category</th>
                                 <th>Type</th>
                                 <th>Amount</th>
                                 <th>Description</th>
@@ -128,6 +131,7 @@ function safe_echo($str) {
                                     <td><?php echo safe_echo($row['voucher_number']); ?></td>
                                     <td><?php echo safe_echo($row['head_name']); ?></td>
                                     <td><?php echo safe_echo($row['category_name']); ?></td>
+                                    <td><?php echo safe_echo($row['subcategory_name']); ?></td>
                                     <td>
                                         <span class="badge <?php echo $row['type'] == 'income' ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo safe_echo(ucfirst($row['type'])); ?>
@@ -140,7 +144,7 @@ function safe_echo($str) {
                             <?php endwhile; ?>
                             <?php if ($transactions->num_rows == 0): ?>
                                 <tr>
-                                    <td colspan="8" class="text-center">No transactions found</td>
+                                    <td colspan="10" class="text-center">No transactions found</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
