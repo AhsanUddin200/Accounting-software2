@@ -19,7 +19,7 @@ $categories = $conn->query($categories_query);
 // Update the query to include cost center and subcategory
 $query = "SELECT DISTINCT 
     t.id, 
-    t.date, 
+    t.date,     
     t.voucher_number,
     l.ledger_code, 
     ah.name as head_name, 

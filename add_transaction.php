@@ -63,11 +63,25 @@ function getTypeFromHead($head_id, $conn) {
 
 // Function to add a ledger entry
 function addLedgerEntry($conn, $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date) {
-    $stmt = $conn->prepare("INSERT INTO ledgers (transaction_id, ledger_code, account_type, debit, credit, description, date) 
-                           VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("issddss", $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date);
-    $stmt->execute();
-    $stmt->close();
+    // Add error handling
+    try {
+        $stmt = $conn->prepare("INSERT INTO ledgers (transaction_id, ledger_code, account_type, debit, credit, description, date) 
+                               VALUES (?, ?, ?, ?, ?, ?, ?)");
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $conn->error);
+        }
+        
+        $stmt->bind_param("issddss", $transactionId, $ledgerCode, $accountType, $debit, $credit, $description, $date);
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+        
+        $stmt->close();
+    } catch (Exception $e) {
+        error_log("Ledger Entry Error: " . $e->getMessage());
+        throw $e;
+    }
 }
 
 // Process form submission
@@ -110,9 +124,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $debit_type = getTypeFromHead($debit_head_ids[$i], $conn);
             
+            // Add error logging
+            error_log("Processing debit entry: Head ID=" . $debit_head_ids[$i] . ", Amount=" . $debit_amounts[$i]);
+            
             $debit_sql = "INSERT INTO transactions (user_id, head_id, category_id, subcategory_id, cost_center_id, amount, type, date, description, voucher_number) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt_debit = $conn->prepare($debit_sql);
+            if (!$stmt_debit) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            
             $stmt_debit->bind_param("iiiiidssss", 
                 $user_id,
                 $debit_head_ids[$i],
@@ -133,9 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $debit_transaction_id = $stmt_debit->insert_id;
             $debit_transaction_ids[] = $debit_transaction_id;
             
-            // Add ledger entry for debit
-            $ledgerCodeDebit = generateLedgerCode($debit_head_ids[$i], $conn);
-            addLedgerEntry($conn, $debit_transaction_id, $ledgerCodeDebit, $debit_type, $debit_amounts[$i], 0, $debit_description[$i], $date);
+            // Add ledger entry for debit with error handling
+            try {
+                $ledgerCodeDebit = generateLedgerCode($debit_head_ids[$i], $conn);
+                addLedgerEntry($conn, $debit_transaction_id, $ledgerCodeDebit, $debit_type, $debit_amounts[$i], 0, $debit_description[$i], $date);
+            } catch (Exception $e) {
+                error_log("Error adding debit ledger entry: " . $e->getMessage());
+                throw $e;
+            }
         }
 
         // Process all credit entries

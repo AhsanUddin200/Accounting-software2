@@ -412,6 +412,11 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                         </a>
                     </li>
                     <li class="nav-item">
+    <a class="nav-link" href="library_dashboard.php">
+        <i class="fas fa-book me-1"></i> Library
+    </a>
+</li>
+                    <li class="nav-item">
                         <a class="nav-link" href="upload_attendance.php">
                             <i class="fas fa-clock me-1"></i> Upload Attendance
                         </a>
