@@ -22,6 +22,8 @@ $books_result = $conn->query($books_query);
     <title>Issue Book - Library System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
         .navbar {
             background: linear-gradient(135deg, #1e40af, #3b82f6);
@@ -32,6 +34,30 @@ $books_result = $conn->query($books_query);
         }
         .issue-history {
             margin-top: 2rem;
+        }
+        .select2-container {
+            width: 100% !important;
+        }
+        .select2-container .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 38px;
+            padding-left: 12px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+        .select2-search__field {
+            padding: 8px !important;
+        }
+        .select2-results__option {
+            padding: 8px 12px;
+        }
+        .select2-results__option--highlighted {
+            background-color: #0d6efd !important;
         }
     </style>
 </head>
@@ -61,10 +87,12 @@ $books_result = $conn->query($books_query);
                         <form id="issueBookForm">
                             <div class="mb-3">
                                 <label class="form-label">Select Book*</label>
-                                <select class="form-select" name="book_id" required>
-                                    <option value="">Choose a book...</option>
+                                <select class="form-select" name="book_id" id="bookSelect" required>
+                                    <option value="">Type to search book...</option>
                                     <?php while($book = $books_result->fetch_assoc()): ?>
-                                        <option value="<?php echo $book['id']; ?>">
+                                        <option value="<?php echo $book['id']; ?>" 
+                                                data-book-number="<?php echo htmlspecialchars($book['book_number']); ?>"
+                                                data-title="<?php echo htmlspecialchars($book['title']); ?>">
                                             <?php echo htmlspecialchars($book['book_number'] . ' - ' . $book['title']); ?>
                                         </option>
                                     <?php endwhile; ?>
@@ -154,6 +182,8 @@ $books_result = $conn->query($books_query);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
     document.getElementById('issueBookForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -176,6 +206,37 @@ $books_result = $conn->query($books_query);
         .catch(error => {
             console.error('Error:', error);
             alert('Error issuing book. Please try again.');
+        });
+    });
+
+    $(document).ready(function() {
+        $('#bookSelect').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Type book number or title to search...',
+            allowClear: true,
+            width: '100%',
+            matcher: function(params, data) {
+                // If there are no search terms, return all of the data
+                if ($.trim(params.term) === '') {
+                    return data;
+                }
+
+                // Do not display the item if there is no 'text' property
+                if (typeof data.text === 'undefined') {
+                    return null;
+                }
+
+                // Search in both book number and title
+                var bookData = $(data.element).data();
+                var searchStr = (bookData.bookNumber + ' ' + bookData.title).toLowerCase();
+                
+                if (searchStr.indexOf(params.term.toLowerCase()) > -1) {
+                    return data;
+                }
+
+                // Return `null` if the term should not be displayed
+                return null;
+            }
         });
     });
     </script>

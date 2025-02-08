@@ -413,7 +413,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     </li>
                     <li class="nav-item">
     <a class="nav-link" href="library_dashboard.php">
-        <i class="fas fa-book me-1"></i> Library
+        <i class="fas fa-atlas me-1"></i> Library
     </a>
 </li>
                     <li class="nav-item">

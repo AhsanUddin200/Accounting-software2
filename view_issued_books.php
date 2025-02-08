@@ -209,6 +209,12 @@ $result = $stmt->get_result();
     <script>
     function returnBook(issueId) {
         if (confirm('Are you sure you want to mark this book as returned?')) {
+            // Show loading state on button
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Returning...';
+            button.disabled = true;
+
             fetch('return_book.php', {
                 method: 'POST',
                 headers: {
@@ -219,22 +225,27 @@ $result = $stmt->get_result();
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Book returned successfully!');
                     location.reload();
                 } else {
                     alert('Error: ' + data.message);
+                    // Reset button state
+                    button.innerHTML = originalText;
+                    button.disabled = false;
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('Error returning book. Please try again.');
+                // Reset button state
+                button.innerHTML = originalText;
+                button.disabled = false;
             });
         }
     }
 
     function viewDetails(issueId) {
-        // Implement view details functionality
-        alert('View details functionality will be implemented here');
+        // You can implement the view details functionality here
+        window.location.href = `issue_details.php?id=${issueId}`;
     }
     </script>
 </body>

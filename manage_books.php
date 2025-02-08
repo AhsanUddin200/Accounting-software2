@@ -63,6 +63,20 @@ $books_result = $conn->query($books_query);
             padding: 1.5rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+        .book-thumbnail {
+            width: 50px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .book-thumbnail:hover {
+            transform: scale(1.1);
+        }
+        .table td {
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -122,9 +136,10 @@ $books_result = $conn->query($books_query);
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th>Image</th>
                             <th>Book Number</th>
                             <th>Title</th>
                             <th>Author</th>
@@ -137,6 +152,20 @@ $books_result = $conn->query($books_query);
                     <tbody>
                         <?php while($book = $books_result->fetch_assoc()): ?>
                         <tr>
+                            <td>
+                                <?php if (!empty($book['book_image'])): ?>
+                                    <img src="<?php echo htmlspecialchars($book['book_image']); ?>" 
+                                         alt="Book Cover" 
+                                         class="book-thumbnail"
+                                         onclick="showFullImage('<?php echo htmlspecialchars($book['book_image']); ?>', '<?php echo htmlspecialchars($book['title']); ?>')"
+                                    >
+                                <?php else: ?>
+                                    <img src="assets/images/no-book-cover.png" 
+                                         alt="No Cover" 
+                                         class="book-thumbnail"
+                                    >
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars($book['book_number']); ?></td>
                             <td><?php echo htmlspecialchars($book['title']); ?></td>
                             <td><?php echo htmlspecialchars($book['author']); ?></td>
@@ -146,7 +175,7 @@ $books_result = $conn->query($books_query);
                                     <?php echo ucfirst($book['status']); ?>
                                 </span>
                             </td>
-                            <td><?php echo htmlspecialchars($book['school_id']); ?></td>
+                            <td><?php echo htmlspecialchars($book['school']); ?></td>
                             <td>
                                 <button class="btn btn-sm btn-primary me-1" onclick="editBook(<?php echo $book['id']; ?>)">
                                     <i class="fas fa-edit"></i>
@@ -174,7 +203,7 @@ $books_result = $conn->query($books_query);
                 <div class="modal-body">
                     <form id="addBookForm">
                         <div class="mb-3">
-                            <label class="form-label">Book Number*</label>
+                            <label class="form-label">Book Number (ISBN)*</label>
                             <input type="text" class="form-control" name="book_number" required>
                         </div>
                         <div class="mb-3">
@@ -202,6 +231,21 @@ $books_result = $conn->query($books_query);
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" onclick="submitBookForm()">Add Book</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Image Modal for full-size view -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalTitle">Book Cover</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="fullSizeImage" src="" alt="Book Cover" class="img-fluid">
                 </div>
             </div>
         </div>
@@ -251,6 +295,23 @@ $books_result = $conn->query($books_query);
             if (addBookBtn) {
                 addBookBtn.addEventListener('click', submitBookForm);
             }
+        });
+
+        function showFullImage(imageSrc, title) {
+            const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            document.getElementById('fullSizeImage').src = imageSrc;
+            document.getElementById('imageModalTitle').textContent = title;
+            modal.show();
+        }
+
+        // Create a default image for books without covers
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.querySelectorAll('.book-thumbnail');
+            images.forEach(img => {
+                img.onerror = function() {
+                    this.src = 'assets/images/no-book-cover.png';
+                };
+            });
         });
     </script>
 </body>
