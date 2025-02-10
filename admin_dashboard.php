@@ -631,6 +631,9 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <a href="request_ledger_head.php" class="quick-action-btn btn btn-success flex-fill">
                         <i class="fas fa-plus-circle me-2"></i>Request New Ledger Head
                     </a>
+                    <a href="view_petty_cash.php" class="quick-action-btn btn btn-info flex-fill">
+    <i class="fas fa-money-bill-wave me-2"></i>View Petty Cash
+</a>
                     <a href="cleanup_system.php" class="quick-action-btn btn btn-danger flex-fill">
                         <i class="fas fa-trash-alt me-2"></i>System Cleanup
                          <div class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">
@@ -839,4 +842,4 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
         });
     </script>
 </body>
-</html> 
+</html>     

@@ -47,14 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // First Transaction: Expense entry
         $sql = "INSERT INTO transactions 
-               (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
-               VALUES (?, ?, ?, ?, 'expense', ?, ?, ?)";
+               (user_id, head_id, category_id, subcategory_id, amount, type, date, description, voucher_number) 
+               VALUES (?, ?, ?, ?, ?, 'expense', ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iiidsss", 
+        $stmt->bind_param("iiiidsss", 
             $user_id,
             $head_id_expense,
             $expense_category_id,
+            $expense_subcategory_id,
             $debit_amount,
             $date,
             $description,
@@ -65,17 +66,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             throw new Exception("Execute failed: " . $stmt->error);
         }
 
+        // For Debit Entry (Expense)
+        $sql = "INSERT INTO ledgers 
+                (transaction_id, ledger_code, debit, credit, balance, description) 
+                VALUES (LAST_INSERT_ID(), ?, ?, 0, ?, ?)";
+
+        $ledger_code = $voucher_number;
+        $balance = $debit_amount;
+
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("sdds", 
+            $ledger_code,
+            $debit_amount,
+            $balance,
+            $description
+        );
+
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to insert debit ledger entry: " . $stmt->error);
+        }
+
+        // Get the last transaction ID
+        $last_expense_id = $conn->insert_id;
+
         // Second Transaction: Asset entry
         $credit_description = "Petty Cash Payment for " . $description;
         $sql = "INSERT INTO transactions 
-               (user_id, head_id, category_id, amount, type, date, description, voucher_number) 
-               VALUES (?, ?, ?, ?, 'asset', ?, ?, ?)";
+               (user_id, head_id, category_id, subcategory_id, amount, type, date, description, voucher_number) 
+               VALUES (?, ?, ?, ?, ?, 'asset', ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iiidsss", 
+        $stmt->bind_param("iiiidsss", 
             $user_id,
             $head_id_asset,
             $cash_in_hand_id,
+            $cash_subcategory_id,
             $credit_amount,
             $date,
             $credit_description,
@@ -84,6 +109,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         if (!$stmt->execute()) {
             throw new Exception("Execute failed: " . $stmt->error);
+        }
+
+        // For Credit Entry (Asset)
+        $sql = "INSERT INTO ledgers 
+                (transaction_id, ledger_code, debit, credit, balance, description) 
+                VALUES (LAST_INSERT_ID(), ?, 0, ?, ?, ?)";
+
+        $ledger_code = $voucher_number;
+        $balance = -$credit_amount; // Negative for credit entries
+
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("sdds", 
+            $ledger_code,
+            $credit_amount,
+            $balance,
+            $credit_description
+        );
+
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to insert credit ledger entry: " . $stmt->error);
         }
 
         $conn->commit();
@@ -163,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label">Sub Category (Optional)</label>
+                                            <label class="form-label">Expense Sub Category</label>
                                             <select name="expense_subcategory_id" class="form-select expense-subcategory">
                                                 <option value="">Select Category First</option>
                                             </select>
@@ -192,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             <input type="hidden" name="cash_category_id" value="23">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label">Sub Category (Optional)</label>
+                                            <label class="form-label">Cash Sub Category</label>
                                             <select name="cash_subcategory_id" class="form-select">
                                                 <option value="">Select Sub Category</option>
                                                 <?php if ($cash_subcategories && $cash_subcategories->num_rows > 0): ?>
