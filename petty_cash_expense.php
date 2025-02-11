@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         // Get the last transaction ID
-        $last_expense_id = $conn->insert_id;
+        $last_expense_id = $conn->insert_id;    
 
         // Second Transaction: Asset entry
         $credit_description = "Petty Cash Payment for " . $description;

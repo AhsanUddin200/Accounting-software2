@@ -52,28 +52,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
             while (($data = fgetcsv($handle)) !== FALSE) {
                 if (empty($data[0]) || count($data) < 5) continue;
                 
-                // Parse date properly
+                // Finja specific format handling
                 $date = !empty($data[0]) ? date('Y-m-d', strtotime(str_replace('/', '-', $data[0]))) : date('Y-m-d');
-                if ($date === '1970-01-01') {
-                    $date = date('Y-m-d'); // Use today's date if parsing fails
-                }
-                
+                $txn_id = $data[1];  // TXN ID
                 $description = trim($data[2]);
-                
-                // Handle amounts properly
                 $debit_amount = str_replace([',' , ' '], '', $data[3]);
                 $credit_amount = str_replace([',' , ' '], '', $data[4]);
+                $balance = str_replace([',' , ' '], '', $data[5]);
                 
+                // Set type based on debit/credit
                 if (!empty($debit_amount) && floatval($debit_amount) > 0) {
-                    $type = 'expense';
+                    $type = 'expense';  // Make sure this matches your type filter
                     $amount = floatval($debit_amount);
-                    $debit = $amount;
-                    $credit = 0;
                 } else if (!empty($credit_amount) && floatval($credit_amount) > 0) {
-                    $type = 'income';
+                    $type = 'income';   // Make sure this matches your type filter
                     $amount = floatval($credit_amount);
-                    $debit = 0;
-                    $credit = $amount;
                 } else {
                     continue;
                 }
@@ -113,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
                 
                 $ledger_stmt->bind_param("ssisssddss",
                     $voucher_number, $ledger_code, $transaction_id, $type,
-                    $category_id, $entry_type, $debit, $credit,
+                    $category_id, $entry_type, $amount, $amount,
                     $description, $date
                 );
                 
@@ -147,16 +140,94 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
 <head>
     <title>Import Transactions</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .main-container {
+            max-width: 800px;
+            margin: 40px auto;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .card-header h4 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .card-body {
+            padding: 30px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .form-select, .form-control {
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #ced4da;
+        }
+        .form-select:focus, .form-control:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        .btn-primary {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+        }
+        .format-guide {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .format-guide h5 {
+            color: #0056b3;
+            margin-bottom: 15px;
+        }
+        .alert {
+            border-radius: 8px;
+            padding: 15px 20px;
+        }
+        .back-button {
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container py-4">
+    <div class="main-container">
+        <!-- Back Button -->
+        <div class="back-button">
+            <a href="admin_dashboard.php" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+
         <div class="card">
             <div class="card-header">
-                <h4>Import Transaction Data</h4>
+                <h4><i class="fas fa-file-import me-2"></i>Import Transaction Data</h4>
             </div>
             <div class="card-body">
                 <?php if (isset($_SESSION['success'])): ?>
-                    <div class="alert alert-success">
+                    <div class="alert alert-success d-flex align-items-center">
+                        <i class="fas fa-check-circle me-2"></i>
                         <?php 
                         echo $_SESSION['success'];
                         unset($_SESSION['success']);
@@ -165,7 +236,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
                 <?php endif; ?>
                 
                 <?php if (isset($_SESSION['error'])): ?>
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger d-flex align-items-center">
+                        <i class="fas fa-exclamation-circle me-2"></i>
                         <?php 
                         echo $_SESSION['error'];
                         unset($_SESSION['error']);
@@ -174,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
                 <?php endif; ?>
 
                 <form method="POST" enctype="multipart/form-data">
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label class="form-label">Select Subcategory</label>
                         <select name="subcategory_id" class="form-select" required>
                             <option value="">Choose subcategory...</option>
@@ -186,27 +258,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
                         </select>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label class="form-label">Upload Transaction CSV File</label>
-                        <input type="file" name="transaction_csv" class="form-control" accept=".csv" required>
+                        <div class="input-group">
+                            <input type="file" name="transaction_csv" class="form-control" accept=".csv" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Import
+                            </button>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Import Transactions</button>
                 </form>
 
-                <div class="mt-4">
-                    <h5>CSV Format:</h5>
-                    <p>Your CSV should have these columns:</p>
-                    <ol>
-                        <li>Transaction Date</li>
-                        <li>TXN ID</li>
-                        <li>Description</li>
-                        <li>Debit</li>
-                        <li>Credit</li>
-                        <li>Balance</li>
-                    </ol>
+                <div class="format-guide">
+                    <h5><i class="fas fa-info-circle me-2"></i>CSV Format Guide</h5>
+                    <p class="text-muted mb-3">Your CSV file should contain the following columns in order:</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ol class="mb-0">
+                                <li>Transaction Date</li>
+                                <li>TXN ID</li>
+                                <li>Description</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <ol start="4" class="mb-0">
+                                <li>Debit Amount</li>
+                                <li>Credit Amount</li>
+                                <li>Balance</li>
+                            </ol>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

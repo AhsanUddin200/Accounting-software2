@@ -601,6 +601,11 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <i class="fas fa-bolt me-2"></i>Quick Actions
                 </h3>
                 <div class="d-flex gap-3 flex-wrap">
+                    <!-- Add Import Data button -->
+                    <a href="import_transactions.php" class="quick-action-btn btn btn-primary flex-fill">
+                        <i class="fas fa-file-import me-2"></i>Import Data
+                    </a>
+
                     <!-- Add Manage Sub Categories button -->
                     <a href="manage_subcategories.php" class="quick-action-btn btn btn-primary flex-fill">
                         <i class="fas fa-sitemap me-2"></i>Manage Sub Categories
