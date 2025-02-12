@@ -366,7 +366,7 @@ $expense_result = $stmt->get_result();
                 <i class="fas fa-arrow-left mr-2"></i>
                 Back to Dashboard
             </a>
-            <a href="reports.php" class="btn btn-secondary">
+            <a href="financial_reports.php" class="btn btn-secondary">
                 <i class="fas fa-file-alt mr-2"></i>
                 Back to Reports
             </a>

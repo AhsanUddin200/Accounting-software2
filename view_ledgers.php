@@ -117,7 +117,14 @@ if (isset($_GET['category_id'])) {
     <div class="container-fluid py-4">
         <!-- List of Available Ledgers -->
         <?php if (!isset($_GET['category_id'])): ?>
-            <h2 class="mb-4">General Ledgers</h2>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">General Ledgers</h2>
+                <div>
+                    <a href="financial_reports.php" class="btn btn-info">
+                        <i class="fas fa-chart-bar me-2"></i>Back to Reports
+                    </a>
+                </div>
+            </div>
             <div class="row">
                 <?php
                 $current_head = '';
@@ -153,6 +160,9 @@ if (isset($_GET['category_id'])) {
                     <p class="text-muted mb-0">Ledger Entries</p>
                 </div>
                 <div class="btn-group gap-2">
+                    <a href="financial_reports.php" class="btn btn-info">
+                        <i class="fas fa-chart-bar me-2"></i>Back to Reports
+                    </a>
                     <a href="view_ledgers.php" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Back to Ledgers
                     </a>

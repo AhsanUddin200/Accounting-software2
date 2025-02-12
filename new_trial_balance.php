@@ -195,7 +195,7 @@ $net_balance = $total_debit - $total_credit;
             <a href="admin_dashboard.php" class="back-btn">
                 <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
             </a>
-            <a href="reports.php" class="back-btn">
+            <a href="financial_reports.php" class="back-btn">
                 <i class="fas fa-file-alt me-2"></i>Back to Reports
             </a>
         </div>

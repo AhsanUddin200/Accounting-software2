@@ -245,7 +245,7 @@ $total_equity = 0;
         <a href="admin_dashboard.php" class="back-btn">
             <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
         </a>
-        <a href="reports.php" class="back-btn">
+        <a href="financial_reports.php" class="back-btn">
             <i class="fas fa-arrow-left me-2"></i>Back to Reports
         </a>
         <button onclick="window.print()" class="print-btn">
