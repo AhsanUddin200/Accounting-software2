@@ -8,15 +8,19 @@ require_once 'session.php';
 require_once 'db.php';
 require_once 'functions.php';
 
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.php");
-    exit();
-}
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
 
-// Get date and cost center from URL parameters or set defaults
+// Get parameters
 $as_of_date = $_GET['as_of_date'] ?? date('Y-m-d');
 $cost_center_id = $_GET['cost_center'] ?? '';
+
+// For non-super admin, force their cost center
+if (!$is_super_admin) {
+    $cost_center_id = $_SESSION['cost_center_id'];
+}
 
 // Query for assets with cost center
 $assets_query = "
@@ -35,7 +39,8 @@ $assets_query = "
     AND t.date <= ?";
 
 // Add cost center filter if selected
-if (!empty($cost_center_id)) {
+if (!$is_super_admin || !empty($cost_center_id)) {
+    $cost_center_to_use = $is_super_admin ? $cost_center_id : $_SESSION['cost_center_id'];
     $assets_query .= " AND t.cost_center_id = ?";
 }
 
@@ -59,7 +64,7 @@ $liabilities_query = "
     WHERE t.type = 'liability'
     AND t.date <= ?";
 
-if (!empty($cost_center_id)) {
+if (!$is_super_admin || !empty($cost_center_id)) {
     $liabilities_query .= " AND t.cost_center_id = ?";
 }
 
@@ -83,7 +88,7 @@ $equity_query = "
     WHERE t.type = 'equity' 
     AND t.date <= ?";
 
-if (!empty($cost_center_id)) {
+if (!$is_super_admin || !empty($cost_center_id)) {
     $equity_query .= " AND t.cost_center_id = ?";
 }
 
@@ -93,8 +98,8 @@ $equity_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
 
 // Prepare and execute queries with proper parameter binding
 $stmt = $conn->prepare($assets_query);
-if (!empty($cost_center_id)) {
-    $stmt->bind_param("si", $as_of_date, $cost_center_id);
+if (!$is_super_admin || !empty($cost_center_to_use)) {
+    $stmt->bind_param("si", $as_of_date, $cost_center_to_use);
 } else {
     $stmt->bind_param("s", $as_of_date);
 }
@@ -102,8 +107,8 @@ $stmt->execute();
 $assets = $stmt->get_result();
 
 $stmt = $conn->prepare($liabilities_query);
-if (!empty($cost_center_id)) {
-    $stmt->bind_param("si", $as_of_date, $cost_center_id);
+if (!$is_super_admin || !empty($cost_center_to_use)) {
+    $stmt->bind_param("si", $as_of_date, $cost_center_to_use);
 } else {
     $stmt->bind_param("s", $as_of_date);
 }
@@ -111,8 +116,8 @@ $stmt->execute();
 $liabilities = $stmt->get_result();
 
 $stmt = $conn->prepare($equity_query);
-if (!empty($cost_center_id)) {
-    $stmt->bind_param("si", $as_of_date, $cost_center_id);
+if (!$is_super_admin || !empty($cost_center_to_use)) {
+    $stmt->bind_param("si", $as_of_date, $cost_center_to_use);
 } else {
     $stmt->bind_param("s", $as_of_date);
 }
@@ -272,22 +277,24 @@ $total_equity = 0;
                         <input type="date" name="as_of_date" class="form-control" 
                                value="<?php echo htmlspecialchars($as_of_date); ?>">
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Cost Center:</label>
-                        <select name="cost_center" class="form-select">
-                            <option value="">All Cost Centers</option>
-                            <?php
-                            $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
-                            $cost_centers = $conn->query($cost_centers_query);
-                            while ($center = $cost_centers->fetch_assoc()):
-                                $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
-                            ?>
-                                <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
-                                    <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
-                                </option>
-                            <?php endwhile; ?>
-                        </select>
-                    </div>
+                    <?php if ($is_super_admin): ?>
+                        <div class="col-md-4">
+                            <label class="form-label">Cost Center:</label>
+                            <select name="cost_center" class="form-select">
+                                <option value="">All Cost Centers</option>
+                                <?php
+                                $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
+                                $cost_centers = $conn->query($cost_centers_query);
+                                while ($center = $cost_centers->fetch_assoc()):
+                                    $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
+                                ?>
+                                    <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
+                                        <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary">Apply</button>
                     </div>

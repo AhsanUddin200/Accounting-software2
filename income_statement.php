@@ -3,67 +3,66 @@ require_once 'session.php';
 require_once 'db.php';
 require_once 'functions.php';
 
-// Check admin access
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.php");
-    exit();
-}
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
 
-// Get filter values
+// Get date range from URL parameters or set defaults
 $from_date = $_GET['from_date'] ?? date('Y-m-01');
 $to_date = $_GET['to_date'] ?? date('Y-m-d');
 $cost_center_id = $_GET['cost_center'] ?? '';
 
-// Query for income
+// For non-super admin, force their cost center
+if (!$is_super_admin) {
+    $cost_center_id = $_SESSION['cost_center_id'];
+}
+
+// Income query
 $income_query = "SELECT 
     ah.name as head_name,
     ac.name as category_name,
     cc.code as cost_center_code,
     cc.name as cost_center_name,
-    SUM(l.credit) - SUM(l.debit) as amount
+    SUM(l.debit - l.credit) as amount
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
     LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
-    WHERE t.type = 'income' 
-    AND t.date BETWEEN ? AND ?";
+    WHERE t.date BETWEEN ? AND ?
+    AND ah.name = 'Income'";
 
-// Add cost center filter if selected
-if (!empty($cost_center_id)) {
-    $income_query .= " AND t.cost_center_id = ?";
-}
-
-$income_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
-                   ORDER BY ah.name, ac.name";
-
-// Query for expenses
+// Expense query with similar structure
 $expense_query = "SELECT 
     ah.name as head_name,
     ac.name as category_name,
     cc.code as cost_center_code,
     cc.name as cost_center_name,
-    SUM(l.debit) - SUM(l.credit) as amount
+    SUM(l.debit - l.credit) as amount
     FROM ledgers l
     JOIN transactions t ON l.transaction_id = t.id
     JOIN accounting_heads ah ON t.head_id = ah.id
     JOIN account_categories ac ON t.category_id = ac.id
     LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
-    WHERE t.type = 'expense' 
-    AND t.date BETWEEN ? AND ?";
+    WHERE t.date BETWEEN ? AND ?
+    AND ah.name = 'Expense'";
 
-// Add cost center filter if selected
-if (!empty($cost_center_id)) {
+// Add cost center filter
+if (!$is_super_admin || !empty($cost_center_id)) {
+    $cost_center_to_use = $is_super_admin ? $cost_center_id : $_SESSION['cost_center_id'];
+    $income_query .= " AND t.cost_center_id = ?";
     $expense_query .= " AND t.cost_center_id = ?";
 }
 
-$expense_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name
-                    ORDER BY ah.name, ac.name";
+// Add group by and order by
+$income_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name ORDER BY ah.name, ac.name";
+$expense_query .= " GROUP BY ah.name, ac.name, cc.code, cc.name ORDER BY ah.name, ac.name";
 
 // Prepare and execute income query
 $stmt = $conn->prepare($income_query);
-if (!empty($cost_center_id)) {
-    $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_id);
+if (!$is_super_admin || !empty($cost_center_id)) {
+    $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_to_use);
 } else {
     $stmt->bind_param("ss", $from_date, $to_date);
 }
@@ -72,8 +71,8 @@ $income_result = $stmt->get_result();
 
 // Prepare and execute expense query
 $stmt = $conn->prepare($expense_query);
-if (!empty($cost_center_id)) {
-    $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_id);
+if (!$is_super_admin || !empty($cost_center_id)) {
+    $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_to_use);
 } else {
     $stmt->bind_param("ss", $from_date, $to_date);
 }
@@ -382,27 +381,22 @@ $expense_result = $stmt->get_result();
         </div>
 
         <!-- Filter Section -->
-        <div class="statement-card no-print">
-            <div class="card-header">
-                <h2 class="text-xl font-semibold">Filter Options</h2>
-            </div>
-            <div class="card-body">
-                <form method="GET" class="filter-grid">
-                    <div class="form-group">
-                        <label class="form-label">From Date</label>
-                        <input type="date" name="from_date" 
-                            class="form-control"
-                            value="<?php echo $from_date; ?>">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">To Date</label>
-                        <input type="date" name="to_date" 
-                            class="form-control"
-                            value="<?php echo $to_date; ?>">
-                    </div>
-                    <div class="form-group">
+        <div class="filter-section no-print">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="from_date" class="form-control" 
+                           value="<?php echo htmlspecialchars($from_date); ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="to_date" class="form-control" 
+                           value="<?php echo htmlspecialchars($to_date); ?>">
+                </div>
+                <?php if ($is_super_admin): ?>
+                    <div class="col-md-3">
                         <label class="form-label">Cost Center</label>
-                        <select name="cost_center" class="form-control">
+                        <select name="cost_center" class="form-select">
                             <option value="">All Cost Centers</option>
                             <?php
                             $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
@@ -416,22 +410,11 @@ $expense_result = $stmt->get_result();
                             <?php endwhile; ?>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary w-full mb-2">
-                            <i class="fas fa-filter"></i>
-                            <span>Apply Filter</span>
-                        </button>
-                        <button type="button" onclick="exportToCSV()" class="btn btn-secondary w-full mb-2">
-                            <i class="fas fa-file-csv"></i>
-                            <span>Export CSV</span>
-                        </button>
-                        <button type="button" onclick="window.print()" class="btn btn-secondary w-full">
-                            <i class="fas fa-print"></i>
-                            <span>Print Report</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <?php endif; ?>
+                <div class="col-md-12 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">Apply Filter</button>
+                </div>
+            </form>
         </div>
 
         <!-- Main Content -->

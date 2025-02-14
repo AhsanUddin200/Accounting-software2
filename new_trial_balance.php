@@ -7,11 +7,16 @@ ini_set('display_errors', 1);
 require_once 'session.php';
 require_once 'db.php';
 
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
+
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
 
 // Get date range from URL parameters or set defaults
 $from_date = $_GET['from_date'] ?? date('Y-m-01'); // First day of current month
@@ -42,8 +47,12 @@ $query = "SELECT
     LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
     WHERE t.date BETWEEN ? AND ?";
 
-// Add cost center filter condition
-if (!empty($cost_center_id)) {
+// Add cost center restriction for non-super admins
+if (!$is_super_admin) {
+    $query .= " AND t.cost_center_id = " . $_SESSION['cost_center_id'];
+} 
+// Add cost center filter for super admin if selected
+else if (!empty($cost_center_id)) {
     $query .= " AND t.cost_center_id = ?";
 }
 
@@ -61,7 +70,7 @@ $query .= " GROUP BY ah.name, ac.name, cc.code, cc.name, t.type
 // Prepare and execute the query with proper parameter binding
 $stmt = $conn->prepare($query);
 
-if (!empty($cost_center_id)) {
+if ($is_super_admin && !empty($cost_center_id)) {
     $stmt->bind_param("ssi", $from_date, $to_date, $cost_center_id);
 } else {
     $stmt->bind_param("ss", $from_date, $to_date);
@@ -238,22 +247,24 @@ $net_balance = $total_debit - $total_credit;
                     <input type="date" name="to_date" class="form-control" 
                            value="<?php echo htmlspecialchars($to_date); ?>">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Cost Center:</label>
-                    <select name="cost_center" class="form-select">
-                        <option value="">All Cost Centers</option>
-                        <?php
-                        $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
-                        $cost_centers = $conn->query($cost_centers_query);
-                        while ($center = $cost_centers->fetch_assoc()):
-                            $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
-                        ?>
-                            <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
-                                <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
+                <?php if ($is_super_admin): ?>
+                    <div class="col-md-3">
+                        <label class="form-label">Cost Center:</label>
+                        <select name="cost_center" class="form-select">
+                            <option value="">All Cost Centers</option>
+                            <?php
+                            $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY code";
+                            $cost_centers = $conn->query($cost_centers_query);
+                            while ($center = $cost_centers->fetch_assoc()):
+                                $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
+                            ?>
+                                <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
+                                    <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
                 <div class="col-md-4 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary">Apply Filter</button>
                 </div>

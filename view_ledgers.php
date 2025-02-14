@@ -3,7 +3,7 @@ require_once 'session.php';
 require_once 'db.php';
 require_once 'functions.php';
 
-// Fetch all categories grouped by accounting heads
+// Show all categories for everyone
 $categories_query = "SELECT 
     ah.id as head_id,
     ah.name as head_name,
@@ -45,10 +45,12 @@ if (isset($_GET['category_id'])) {
     $cat_stmt->execute();
     $category_info = $cat_stmt->get_result()->fetch_assoc();
     
-    if (!$category_info) {
-        die("Invalid category selected");
-    }
-    
+    // Check if super admin
+    $is_super_admin = ($_SESSION['username'] === 'saim' || 
+                       $_SESSION['username'] === 'admin' || 
+                       empty($_SESSION['cost_center_id']));
+
+    // Ledger details query
     $query = "SELECT 
         l.ledger_code,
         l.date,
@@ -67,6 +69,11 @@ if (isset($_GET['category_id'])) {
         JOIN account_categories ac ON t.category_id = ac.id
         LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
         WHERE t.category_id = ?";
+
+    // Add cost center restriction for non-super admins
+    if (!$is_super_admin) {
+        $query .= " AND t.cost_center_id = " . $_SESSION['cost_center_id'];
+    }
 
     // Add date filters if provided
     if (!empty($_GET['from_date'])) {

@@ -3,8 +3,13 @@
 require 'session.php';
 require 'db.php';
 
-// Check if the logged-in user is an admin
-if ($_SESSION['role'] != 'admin') {
+// Check if the logged-in user is a super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
+
+// Redirect non-super admin users
+if (!$is_super_admin) {
     header("Location: user_dashboard.php");
     exit();
 }

@@ -220,6 +220,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $heads_query = "SELECT * FROM accounting_heads ORDER BY FIELD(name, 'Assets', 'Liabilities', 'Equities', 'Income', 'Expenses')";
 $heads = $conn->query($heads_query);
 
+// Fetch cost centers for super admin
+$cost_centers_query = "SELECT * FROM cost_centers ORDER BY name";
+$cost_centers = $conn->query($cost_centers_query);
+
 function generateLedgerCode($head_id, $conn) {
     // Get the head prefix (e.g., AS for Assets, EX for Expenses)
     $prefix_query = "SELECT 
@@ -418,18 +422,29 @@ function generateLedgerCode($head_id, $conn) {
                         <div class="col-md-3">
                             <div class="form-group">    
                                 <label>Cost Center</label>
-                                <select name="cost_center_id[]" class="form-select">
-                                    <option value="">Select Cost Center</option>
-                                    <?php
-                                    $cost_centers_query = "SELECT id, code, name FROM cost_centers ORDER BY name";
-                                    $cost_centers = $conn->query($cost_centers_query);
-                                    while ($center = $cost_centers->fetch_assoc()):
+                                <?php if (isset($_SESSION['cost_center_id'])): ?>
+                                    <!-- For campus admin: hidden input with their cost center -->
+                                    <input type="hidden" name="cost_center_id[]" value="<?php echo $_SESSION['cost_center_id']; ?>">
+                                    <?php 
+                                        // Display cost center name
+                                        $stmt = $conn->prepare("SELECT name FROM cost_centers WHERE id = ?");
+                                        $stmt->bind_param("i", $_SESSION['cost_center_id']);
+                                        $stmt->execute();
+                                        $result = $stmt->get_result();
+                                        $cost_center = $result->fetch_assoc();
                                     ?>
-                                        <option value="<?php echo $center['id']; ?>">
-                                            <?php echo htmlspecialchars($center['code'] . ' - ' . $center['name']); ?>
-                                        </option>
-                                    <?php endwhile; ?>
-                                </select>
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($cost_center['name']); ?>" disabled>
+                                <?php else: ?>
+                                    <!-- For super admin: dropdown to select cost center -->
+                                    <select name="cost_center_id[]" class="form-select" required>
+                                        <option value="">Select Cost Center</option>
+                                        <?php while($cost_center = $cost_centers->fetch_assoc()): ?>
+                                            <option value="<?php echo $cost_center['id']; ?>">
+                                                <?php echo htmlspecialchars($cost_center['code'] . ' - ' . $cost_center['name']); ?>
+                                            </option>
+                                        <?php endwhile; ?>
+                                    </select>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

@@ -8,6 +8,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
+// First check if user is super admin
+$is_super_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin' && empty($_SESSION['cost_center_id']);
+
 // Fetch heads for filter
 $heads_query = "SELECT * FROM accounting_heads ORDER BY display_order";
 $heads = $conn->query($heads_query);
@@ -16,61 +19,35 @@ $heads = $conn->query($heads_query);
 $categories_query = "SELECT * FROM account_categories ORDER BY name";
 $categories = $conn->query($categories_query);
 
-// Update the query to include cost center and subcategory
-$query = "SELECT DISTINCT 
-    t.id, 
-    t.date,     
+// Simplified query to get recent transactions
+$query = "SELECT 
+    t.date,
     t.voucher_number,
-    l.ledger_code, 
-    ah.name as head_name, 
+    ah.name as head_name,
     ac.name as category_name,
     acs.name as subcategory_name,
-    cc.code as cost_center_code,
-    cc.name as cost_center_name, 
-    t.type, 
-    t.amount, 
-    t.description, 
-    u.username 
-    FROM transactions t
-    LEFT JOIN accounting_heads ah ON t.head_id = ah.id
-    LEFT JOIN account_categories ac ON t.category_id = ac.id
-    LEFT JOIN account_subcategories acs ON t.subcategory_id = acs.id
-    LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
-    LEFT JOIN users u ON t.user_id = u.id
-    LEFT JOIN ledgers l ON t.id = l.transaction_id
-    WHERE 1=1";
+    t.type,
+    t.amount,
+    t.description,
+    u.username as added_by,
+    cc.name as cost_center_name
+FROM transactions t
+LEFT JOIN accounting_heads ah ON t.head_id = ah.id
+LEFT JOIN account_categories ac ON t.category_id = ac.id
+LEFT JOIN account_subcategories acs ON t.subcategory_id = acs.id
+LEFT JOIN users u ON t.user_id = u.id
+LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
+WHERE 1=1 ";
 
-// Add filter conditions
-if (!empty($_GET['head'])) {
-    $query .= " AND t.head_id = " . intval($_GET['head']);
+// Only add cost center condition for regular admins
+if (!$is_super_admin) {
+    $query .= " AND t.cost_center_id = " . intval($_SESSION['cost_center_id']);
 }
 
-if (!empty($_GET['category'])) {
-    $query .= " AND t.category_id = " . intval($_GET['category']);
-}
+// Order by most recent first and limit to last 10 transactions
+$query .= " ORDER BY t.date DESC, t.id DESC LIMIT 10";
 
-if (!empty($_GET['from_date'])) {
-    $query .= " AND t.date >= '" . $conn->real_escape_string($_GET['from_date']) . "'";
-}
-
-if (!empty($_GET['to_date'])) {
-    $query .= " AND t.date <= '" . $conn->real_escape_string($_GET['to_date']) . "'";
-}
-
-if (!empty($_GET['voucher_number'])) {
-    $query .= " AND t.voucher_number LIKE '%" . 
-              $conn->real_escape_string($_GET['voucher_number']) . "%'";
-}
-
-// Add cost center filter
-if (!empty($_GET['cost_center'])) {
-    $query .= " AND t.cost_center_id = " . intval($_GET['cost_center']);
-}
-
-// Group by transaction ID to prevent duplicates
-$query .= " GROUP BY t.id ORDER BY t.date DESC, t.created_at DESC LIMIT 10";
-
-$transactions = $conn->query($query);
+$result = $conn->query($query);
 
 // Function to safely escape output
 function safe_echo($str) {
@@ -112,7 +89,6 @@ function safe_echo($str) {
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Ledger Code</th>
                                 <th>Voucher No.</th>
                                 <th>Head</th>
                                 <th>Category</th>
@@ -121,30 +97,38 @@ function safe_echo($str) {
                                 <th>Amount</th>
                                 <th>Description</th>
                                 <th>Added By</th>
+                                <?php if ($is_super_admin): ?>
+                                    <th>Cost Center</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php while ($row = $transactions->fetch_assoc()): ?>
+                            <?php if ($result && $result->num_rows > 0): ?>
+                                <?php while ($row = $result->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?php echo date('Y-m-d', strtotime($row['date'])); ?></td>
+                                        <td><?php echo safe_echo($row['voucher_number']); ?></td>
+                                        <td><?php echo safe_echo($row['head_name']); ?></td>
+                                        <td><?php echo safe_echo($row['category_name']); ?></td>
+                                        <td><?php echo safe_echo($row['subcategory_name']); ?></td>
+                                        <td>
+                                            <span class="badge <?php echo $row['type'] == 'income' ? 'bg-success' : 'bg-danger'; ?>">
+                                                <?php echo safe_echo(ucfirst($row['type'])); ?>
+                                            </span>
+                                        </td>
+                                        <td><?php echo number_format($row['amount'], 2); ?></td>
+                                        <td><?php echo safe_echo($row['description']); ?></td>
+                                        <td><?php echo safe_echo($row['added_by']); ?></td>
+                                        <?php if ($is_super_admin): ?>
+                                            <td><?php echo safe_echo($row['cost_center_name']); ?></td>
+                                        <?php endif; ?>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
                                 <tr>
-                                    <td><?php echo safe_echo($row['date']); ?></td>
-                                    <td><?php echo safe_echo($row['ledger_code']); ?></td>
-                                    <td><?php echo safe_echo($row['voucher_number']); ?></td>
-                                    <td><?php echo safe_echo($row['head_name']); ?></td>
-                                    <td><?php echo safe_echo($row['category_name']); ?></td>
-                                    <td><?php echo safe_echo($row['subcategory_name']); ?></td>
-                                    <td>
-                                        <span class="badge <?php echo $row['type'] == 'income' ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo safe_echo(ucfirst($row['type'])); ?>
-                                        </span>
+                                    <td colspan="<?php echo $is_super_admin ? '10' : '9'; ?>" class="text-center">
+                                        No transactions found
                                     </td>
-                                    <td><?php echo number_format($row['amount'], 2); ?></td>
-                                    <td><?php echo safe_echo($row['description']); ?></td>
-                                    <td><?php echo safe_echo($row['username']); ?></td>
-                                </tr>
-                            <?php endwhile; ?>
-                            <?php if ($transactions->num_rows == 0): ?>
-                                <tr>
-                                    <td colspan="10" class="text-center">No transactions found</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>

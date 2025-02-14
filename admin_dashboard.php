@@ -15,62 +15,101 @@ if ($_SESSION['role'] != 'admin') {
 $period_start = date('Y-m-01'); // First day of current month
 $period_end = date('Y-m-t');    // Last day of current month
 
-// Get the current month's start and end dates
-$start_date = date('Y-m-01');
-$end_date = date('Y-m-t');
+// Base query condition
+$cost_center_condition = "";
+$cost_center_params = [];
+if (isset($_SESSION['cost_center_id'])) {
+    $cost_center_condition = "AND cost_center_id = ?";
+    $cost_center_params[] = $_SESSION['cost_center_id'];
+}
 
 // Income Total with YTD
 $income_query = "SELECT 
-    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN date BETWEEN ? AND ? THEN amount ELSE 0 END) as current_amount,
     SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
-    WHERE type = 'income'";
-$result = $conn->query($income_query);
-$income_data = $result->fetch_assoc();
+    WHERE type = 'income' $cost_center_condition";
+
+$stmt = $conn->prepare($income_query);
+if (isset($_SESSION['cost_center_id'])) {
+    $stmt->bind_param("ssi", $period_start, $period_end, $_SESSION['cost_center_id']);
+} else {
+    $stmt->bind_param("ss", $period_start, $period_end);
+}
+$stmt->execute();
+$income_data = $stmt->get_result()->fetch_assoc();
 $income_total = $income_data['current_amount'] ?? 0;
 $income_ytd = $income_data['ytd_amount'] ?? 0;
 
 // Expenses Total with YTD
 $expense_query = "SELECT 
-    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN date BETWEEN ? AND ? THEN amount ELSE 0 END) as current_amount,
     SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
-    WHERE type = 'expense'";
-$result = $conn->query($expense_query);
-$expense_data = $result->fetch_assoc();
+    WHERE type = 'expense' $cost_center_condition";
+
+$stmt = $conn->prepare($expense_query);
+if (isset($_SESSION['cost_center_id'])) {
+    $stmt->bind_param("ssi", $period_start, $period_end, $_SESSION['cost_center_id']);
+} else {
+    $stmt->bind_param("ss", $period_start, $period_end);
+}
+$stmt->execute();
+$expense_data = $stmt->get_result()->fetch_assoc();
 $expense_total = $expense_data['current_amount'] ?? 0;
 $expense_ytd = $expense_data['ytd_amount'] ?? 0;
 
 // Assets Total with YTD
 $assets_query = "SELECT 
-    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN date BETWEEN ? AND ? THEN amount ELSE 0 END) as current_amount,
     SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
-    WHERE type = 'asset'";
-$result = $conn->query($assets_query);
-$assets_data = $result->fetch_assoc();
+    WHERE type = 'asset' $cost_center_condition";
+
+$stmt = $conn->prepare($assets_query);
+if (isset($_SESSION['cost_center_id'])) {
+    $stmt->bind_param("ssi", $period_start, $period_end, $_SESSION['cost_center_id']);
+} else {
+    $stmt->bind_param("ss", $period_start, $period_end);
+}
+$stmt->execute();
+$assets_data = $stmt->get_result()->fetch_assoc();
 $assets_total = $assets_data['current_amount'] ?? 0;
 $assets_ytd = $assets_data['ytd_amount'] ?? 0;
 
 // Liabilities Total with YTD
 $liabilities_query = "SELECT 
-    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN date BETWEEN ? AND ? THEN amount ELSE 0 END) as current_amount,
     SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
-    WHERE type = 'liability'";
-$result = $conn->query($liabilities_query);
-$liabilities_data = $result->fetch_assoc();
+    WHERE type = 'liability' $cost_center_condition";
+
+$stmt = $conn->prepare($liabilities_query);
+if (isset($_SESSION['cost_center_id'])) {
+    $stmt->bind_param("ssi", $period_start, $period_end, $_SESSION['cost_center_id']);
+} else {
+    $stmt->bind_param("ss", $period_start, $period_end);
+}
+$stmt->execute();
+$liabilities_data = $stmt->get_result()->fetch_assoc();
 $liabilities_total = $liabilities_data['current_amount'] ?? 0;
 $liabilities_ytd = $liabilities_data['ytd_amount'] ?? 0;
 
 // Equities Total with YTD
 $equities_query = "SELECT 
-    SUM(CASE WHEN date BETWEEN '$period_start' AND '$period_end' THEN amount ELSE 0 END) as current_amount,
+    SUM(CASE WHEN date BETWEEN ? AND ? THEN amount ELSE 0 END) as current_amount,
     SUM(CASE WHEN YEAR(date) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END) as ytd_amount
     FROM transactions 
-    WHERE type = 'equity'";
-$result = $conn->query($equities_query);
-$equities_data = $result->fetch_assoc();
+    WHERE type = 'equity' $cost_center_condition";
+
+$stmt = $conn->prepare($equities_query);
+if (isset($_SESSION['cost_center_id'])) {
+    $stmt->bind_param("ssi", $period_start, $period_end, $_SESSION['cost_center_id']);
+} else {
+    $stmt->bind_param("ss", $period_start, $period_end);
+}
+$stmt->execute();
+$equities_data = $stmt->get_result()->fetch_assoc();
 $equities_total = $equities_data['current_amount'] ?? 0;
 $equities_ytd = $equities_data['ytd_amount'] ?? 0;
 
@@ -83,13 +122,21 @@ $user_count_result = $conn->query("SELECT COUNT(*) as total_users FROM users");
 $user_count = $user_count_result->fetch_assoc()['total_users'] ?? 0;
 
 // Fetch recent audit logs
-$stmt = $conn->prepare("SELECT audit_logs.*, users.username FROM audit_logs 
-                        LEFT JOIN users ON audit_logs.user_id = users.id 
-                        ORDER BY audit_logs.timestamp DESC LIMIT 5");
+$logs_query = "SELECT audit_logs.*, users.username 
+               FROM audit_logs 
+               LEFT JOIN users ON audit_logs.user_id = users.id 
+               WHERE 1=1 ";
+if (isset($_SESSION['cost_center_id'])) {
+    $logs_query .= "AND users.cost_center_id = ? ";
+}
+$logs_query .= "ORDER BY audit_logs.timestamp DESC LIMIT 5";
+
+$stmt = $conn->prepare($logs_query);
+if (isset($_SESSION['cost_center_id'])) {
+    $stmt->bind_param("i", $_SESSION['cost_center_id']);
+}
 $stmt->execute();
-$result = $stmt->get_result();
-$recent_logs = $result->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+$recent_logs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // Fetch statistics
 $transaction_count_result = $conn->query("SELECT COUNT(*) as total_transactions FROM transactions");
@@ -99,11 +146,20 @@ $category_count_result = $conn->query("SELECT COUNT(*) as total_categories FROM 
 $total_categories = $category_count_result->fetch_assoc()['total_categories'] ?? 0;
 
 // Fetch recent income entries
-$recent_income_stmt = $conn->prepare("SELECT description, amount, date FROM transactions 
-                                    WHERE type = 'income' ORDER BY date DESC LIMIT 5");
-$recent_income_stmt->execute();
-$recent_incomes = $recent_income_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$recent_income_stmt->close();
+$income_entries_query = "SELECT description, amount, date 
+                        FROM transactions 
+                        WHERE type = 'income' ";
+if (isset($_SESSION['cost_center_id'])) {
+    $income_entries_query .= "AND cost_center_id = ? ";
+}
+$income_entries_query .= "ORDER BY date DESC LIMIT 5";
+
+$stmt = $conn->prepare($income_entries_query);
+if (isset($_SESSION['cost_center_id'])) {
+    $stmt->bind_param("i", $_SESSION['cost_center_id']);
+}
+$stmt->execute();
+$recent_incomes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // Log dashboard view
 log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accessed the dashboard.');
@@ -639,13 +695,30 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <a href="view_petty_cash.php" class="quick-action-btn btn btn-info flex-fill">
     <i class="fas fa-money-bill-wave me-2"></i>View Petty Cash
 </a>
+
                     <a href="cleanup_system.php" class="quick-action-btn btn btn-danger flex-fill">
                         <i class="fas fa-trash-alt me-2"></i>System Cleanup
                          <div class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">
                     (use before production)
                 </div>
+
+                
+                
                         
                     </a>
+                      <?php 
+                    // Show Create Sub User button for saim, admin, or any super admin (no cost center)
+                    if (empty($_SESSION['cost_center_id']) && 
+                        ($_SESSION['role'] === 'super_admin' || 
+                         $_SESSION['username'] === 'saim' || 
+                         $_SESSION['username'] === 'admin')): 
+                    ?>
+                    <div class="col-auto">
+    <a href="create_user.php" class="btn btn-warning" style="width: 200px; height: 70px; font-size: 16px; font-weight: bold; color: #000; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-user-plus me-2"></i>Create Sub User
+    </a>
+</div>
+                    <?php endif; ?>
                     
                 </div>
             </div>
