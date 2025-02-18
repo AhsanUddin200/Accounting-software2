@@ -10,71 +10,85 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Enable error reporting
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
 
-header('Content-Type: application/json');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $book_number = trim($_POST['book_number']);
+    $title = trim($_POST['title']);
+    $author = trim($_POST['author']);
+    $shelf_number = trim($_POST['shelf_number']);
+    $school = trim($_POST['school']);
+    $cost_center_id = $is_super_admin ? $_POST['cost_center_id'] : $_SESSION['cost_center_id'];
 
-try {
-    // Get POST data
-    $book_number = $_POST['book_number'];
-    $title = $_POST['title'];
-    $author = $_POST['author'];
-    $shelf_number = $_POST['shelf_number'];
-    $school = $_POST['school'];
-    
-    // Log received data
-    error_log("Received data: " . print_r($_POST, true));
+    // First check if book number already exists
+    $check_query = "SELECT id FROM library_books WHERE book_number = ?";
+    $check_stmt = $conn->prepare($check_query);
+    $check_stmt->bind_param('s', $book_number);
+    $check_stmt->execute();
+    $result = $check_stmt->get_result();
 
-    // Handle image upload
-    $image_path = '';
-    if (isset($_FILES['book_image']) && $_FILES['book_image']['error'] == 0) {
+    if ($result->num_rows > 0) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Book number already exists. Please use a different book number.'
+        ]);
+        exit();
+    }
+
+    // Handle image upload if present
+    $book_image = '';
+    if (isset($_FILES['book_image']) && $_FILES['book_image']['error'] === 0) {
         $upload_dir = 'uploads/books/';
         if (!file_exists($upload_dir)) {
             mkdir($upload_dir, 0777, true);
         }
-        
-        $file_name = time() . '_' . $_FILES['book_image']['name'];
-        $target_path = $upload_dir . $file_name;
-        
-        if (move_uploaded_file($_FILES['book_image']['tmp_name'], $target_path)) {
-            $image_path = $target_path;
+
+        $file_extension = strtolower(pathinfo($_FILES['book_image']['name'], PATHINFO_EXTENSION));
+        $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+
+        if (in_array($file_extension, $allowed_extensions)) {
+            $new_filename = uniqid() . '_Screenshot ' . date('Y-m-d H.i.s') . '.' . $file_extension;
+            $upload_path = $upload_dir . $new_filename;
+
+            if (move_uploaded_file($_FILES['book_image']['tmp_name'], $upload_path)) {
+                $book_image = $upload_path;
+            }
         }
     }
 
-    // Insert into database using prepared statement
-    $sql = "INSERT INTO library_books (book_number, title, author, shelf_number, school, book_image, status) 
-            VALUES (?, ?, ?, ?, ?, ?, 'available')";
+    // Insert new book
+    $query = "INSERT INTO library_books (book_number, title, author, shelf_number, school, book_image, status, cost_center_id) 
+              VALUES (?, ?, ?, ?, ?, ?, 'available', ?)";
     
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
+    try {
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('ssssssi', 
+            $book_number,
+            $title,
+            $author,
+            $shelf_number,
+            $school,
+            $book_image,
+            $cost_center_id
+        );
+
+        if ($stmt->execute()) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Book added successfully']);
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Error adding book: ' . $stmt->error]);
+        }
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
-
-    $stmt->bind_param("ssssss", 
-        $book_number,
-        $title,
-        $author,
-        $shelf_number,
-        $school,
-        $image_path
-    );
-
-    if ($stmt->execute()) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Book added successfully'
-        ]);
-    } else {
-        throw new Exception("Execute failed: " . $stmt->error);
-    }
-
-} catch (Exception $e) {
-    error_log("Error in add_book.php: " . $e->getMessage());
-    echo json_encode([
-        'success' => false,
-        'message' => 'Error: ' . $e->getMessage()
-    ]);
+} else {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
 }
 ?> 

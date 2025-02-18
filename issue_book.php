@@ -9,9 +9,37 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Get available books for dropdown
-$books_query = "SELECT id, book_number, title FROM library_books WHERE status = 'available'";
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
+
+// Base WHERE clause for cost center filtering
+$where_clause = "";
+if (!$is_super_admin) {
+    $where_clause = " AND lb.cost_center_id = " . intval($_SESSION['cost_center_id']);
+}
+
+// Get available books for dropdown with cost center filtering
+$books_query = "SELECT lb.id, lb.book_number, lb.title, cc.name as cost_center_name 
+                FROM library_books lb 
+                LEFT JOIN cost_centers cc ON lb.cost_center_id = cc.id 
+                WHERE lb.status = 'available'" . $where_clause . 
+                " ORDER BY lb.book_number";
 $books_result = $conn->query($books_query);
+
+// Get cost center name for regular admin
+$cost_center_name = "";
+if (!$is_super_admin) {
+    $cc_query = "SELECT name FROM cost_centers WHERE id = ?";
+    $cc_stmt = $conn->prepare($cc_query);
+    $cc_stmt->bind_param('i', $_SESSION['cost_center_id']);
+    $cc_stmt->execute();
+    $cc_result = $cc_stmt->get_result();
+    if ($row = $cc_result->fetch_assoc()) {
+        $cost_center_name = $row['name'];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -19,7 +47,7 @@ $books_result = $conn->query($books_query);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Issue Book - Library System</title>
+    <title><?php echo $cost_center_name ? "$cost_center_name - " : ""; ?>Issue Book - Library System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -65,8 +93,10 @@ $books_result = $conn->query($books_query);
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" alt="FMS Logo" height="40" class="me-2">
                 <i class="fas fa-book me-2"></i>Issue Book
+                <?php if (!$is_super_admin): ?>
+                    - <?php echo htmlspecialchars($cost_center_name); ?>
+                <?php endif; ?>
             </a>
             <div class="ms-auto">
                 <a href="library_dashboard.php" class="nav-link text-white">
@@ -93,7 +123,12 @@ $books_result = $conn->query($books_query);
                                         <option value="<?php echo $book['id']; ?>" 
                                                 data-book-number="<?php echo htmlspecialchars($book['book_number']); ?>"
                                                 data-title="<?php echo htmlspecialchars($book['title']); ?>">
-                                            <?php echo htmlspecialchars($book['book_number'] . ' - ' . $book['title']); ?>
+                                            <?php 
+                                            echo htmlspecialchars($book['book_number'] . ' - ' . $book['title']);
+                                            if ($is_super_admin) {
+                                                echo ' (' . htmlspecialchars($book['cost_center_name']) . ')';
+                                            }
+                                            ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
@@ -150,13 +185,18 @@ $books_result = $conn->query($books_query);
                             <th>Issue Date</th>
                             <th>Due Date</th>
                             <th>Status</th>
+                            <?php if ($is_super_admin): ?>
+                            <th>Cost Center</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        $recent_issues_query = "SELECT bi.*, lb.title 
+                        $recent_issues_query = "SELECT bi.*, lb.title, cc.name as cost_center_name 
                                               FROM book_issues bi 
                                               JOIN library_books lb ON bi.book_id = lb.id 
+                                              LEFT JOIN cost_centers cc ON lb.cost_center_id = cc.id 
+                                              WHERE 1=1" . $where_clause . "
                                               ORDER BY bi.issue_date DESC LIMIT 5";
                         $recent_issues = $conn->query($recent_issues_query);
                         
@@ -173,6 +213,9 @@ $books_result = $conn->query($books_query);
                                     <?php echo ucfirst($issue['status']); ?>
                                 </span>
                             </td>
+                            <?php if ($is_super_admin): ?>
+                            <td><?php echo htmlspecialchars($issue['cost_center_name']); ?></td>
+                            <?php endif; ?>
                         </tr>
                         <?php endwhile; ?>
                     </tbody>
@@ -185,60 +228,37 @@ $books_result = $conn->query($books_query);
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-    document.getElementById('issueBookForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        
-        fetch('process_issue_book.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Book issued successfully!');
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error issuing book. Please try again.');
+        $(document).ready(function() {
+            $('#bookSelect').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Type book number or title to search...',
+                allowClear: true,
+                width: '100%'
+            });
         });
-    });
 
-    $(document).ready(function() {
-        $('#bookSelect').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Type book number or title to search...',
-            allowClear: true,
-            width: '100%',
-            matcher: function(params, data) {
-                // If there are no search terms, return all of the data
-                if ($.trim(params.term) === '') {
-                    return data;
+        document.getElementById('issueBookForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            fetch('process_issue_book.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Book issued successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
                 }
-
-                // Do not display the item if there is no 'text' property
-                if (typeof data.text === 'undefined') {
-                    return null;
-                }
-
-                // Search in both book number and title
-                var bookData = $(data.element).data();
-                var searchStr = (bookData.bookNumber + ' ' + bookData.title).toLowerCase();
-                
-                if (searchStr.indexOf(params.term.toLowerCase()) > -1) {
-                    return data;
-                }
-
-                // Return `null` if the term should not be displayed
-                return null;
-            }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error issuing book. Please try again.');
+            });
         });
-    });
     </script>
 </body>
 </html> 

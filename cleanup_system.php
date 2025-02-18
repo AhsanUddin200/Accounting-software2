@@ -2,9 +2,12 @@
 require_once 'session.php';
 require_once 'db.php';
 
-// Only allow admin access
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.php");
+// Only allow super admin access (Saim and Admin)
+$allowed_users = ['saim', 'admin']; // سپر ایڈمن یوزرز کی لسٹ
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['username']) || 
+    !in_array(strtolower($_SESSION['username']), $allowed_users)) {
+    // Redirect unauthorized users
+    header("Location: unauthorized.php");
     exit();
 }
 
@@ -56,6 +59,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_cleanup'])) {
         $message = "Invalid confirmation code. Cleanup aborted.";
         $status = 'danger';
     }
+}
+
+// Update the form to show access denied for non-super admins
+if (!in_array(strtolower($_SESSION['username']), $allowed_users)) {
+    $message = "Access Denied. Only Super Administrators (Saim and Admin) can perform system cleanup.";
+    $status = 'danger';
+    // Disable the form submission
+    echo "<script>
+        window.onload = function() {
+            document.querySelector('form').onsubmit = function(e) {
+                e.preventDefault();
+                return false;
+            }
+            document.querySelector('button[type=\"submit\"]').disabled = true;
+        }
+    </script>";
 }
 ?>
 

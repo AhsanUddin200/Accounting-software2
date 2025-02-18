@@ -2,52 +2,94 @@
 session_start();
 require_once 'db.php';
 
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
+
 // Handle search query
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $author = isset($_GET['author']) ? $_GET['author'] : '';
 $status = isset($_GET['status']) ? $_GET['status'] : 'all';
+$cost_center = isset($_GET['cost_center']) ? $_GET['cost_center'] : '';
 
 // Build query based on filters
-$query = "SELECT * FROM library_books WHERE 1=1";
+$query = "SELECT lb.*, cc.name as cost_center_name 
+          FROM library_books lb 
+          LEFT JOIN cost_centers cc ON lb.cost_center_id = cc.id 
+          WHERE 1=1";
+
+// Add cost center filtering
+if (!$is_super_admin) {
+    $query .= " AND lb.cost_center_id = " . intval($_SESSION['cost_center_id']);
+} elseif (!empty($cost_center)) {
+    $query .= " AND lb.cost_center_id = ?";
+}
 
 if (!empty($search)) {
     $search = "%$search%";
-    $query .= " AND (title LIKE ? OR book_number LIKE ?)";
+    $query .= " AND (lb.title LIKE ? OR lb.book_number LIKE ?)";
 }
 
 if (!empty($author)) {
     $author = "%$author%";
-    $query .= " AND author LIKE ?";
+    $query .= " AND lb.author LIKE ?";
 }
 
 if ($status !== 'all') {
-    $query .= " AND status = ?";
+    $query .= " AND lb.status = ?";
 }
 
-$query .= " ORDER BY book_number";
+$query .= " ORDER BY lb.book_number";
 
 // Prepare and execute query
 $stmt = $conn->prepare($query);
 
-// Bind parameters based on filters
-if (!empty($search) && !empty($author) && $status !== 'all') {
-    $stmt->bind_param('ssss', $search, $search, $author, $status);
-} elseif (!empty($search) && !empty($author)) {
-    $stmt->bind_param('sss', $search, $search, $author);
-} elseif (!empty($search) && $status !== 'all') {
-    $stmt->bind_param('sss', $search, $search, $status);
-} elseif (!empty($author) && $status !== 'all') {
-    $stmt->bind_param('ss', $author, $status);
-} elseif (!empty($search)) {
-    $stmt->bind_param('ss', $search, $search);
-} elseif (!empty($author)) {
-    $stmt->bind_param('s', $author);
-} elseif ($status !== 'all') {
-    $stmt->bind_param('s', $status);
+// Build parameter array and types string
+$params = array();
+$types = '';
+
+if ($is_super_admin && !empty($cost_center)) {
+    $params[] = $cost_center;
+    $types .= 'i';
+}
+
+if (!empty($search)) {
+    $params[] = $search;
+    $params[] = $search;
+    $types .= 'ss';
+}
+
+if (!empty($author)) {
+    $params[] = $author;
+    $types .= 's';
+}
+
+if ($status !== 'all') {
+    $params[] = $status;
+    $types .= 's';
+}
+
+// Bind parameters if any
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
 }
 
 $stmt->execute();
 $result = $stmt->get_result();
+
+// Get cost center name for regular admin
+$cost_center_name = "";
+if (!$is_super_admin) {
+    $cc_query = "SELECT name FROM cost_centers WHERE id = ?";
+    $cc_stmt = $conn->prepare($cc_query);
+    $cc_stmt->bind_param('i', $_SESSION['cost_center_id']);
+    $cc_stmt->execute();
+    $cc_result = $cc_stmt->get_result();
+    if ($row = $cc_result->fetch_assoc()) {
+        $cost_center_name = $row['name'];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -55,7 +97,7 @@ $result = $stmt->get_result();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Books - Library System</title>
+    <title><?php echo $cost_center_name ? "$cost_center_name - " : ""; ?>Search Books - Library System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -87,6 +129,9 @@ $result = $stmt->get_result();
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-book me-2"></i>Library Book Search
+                <?php if (!$is_super_admin): ?>
+                    - <?php echo htmlspecialchars($cost_center_name); ?>
+                <?php endif; ?>
             </a>
             <?php if (isset($_SESSION['role'])): ?>
                 <div class="ms-auto">
@@ -101,7 +146,28 @@ $result = $stmt->get_result();
     <div class="container mt-4">
         <div class="search-container">
             <form method="GET" class="row g-3">
-                <div class="col-md-4">
+                <?php if ($is_super_admin): ?>
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-building"></i></span>
+                        <select name="cost_center" class="form-select">
+                            <option value="">All Cost Centers</option>
+                            <?php
+                            $centers_query = "SELECT id, name FROM cost_centers ORDER BY name";
+                            $centers = $conn->query($centers_query);
+                            while ($center = $centers->fetch_assoc()):
+                                $selected = ($cost_center == $center['id']) ? 'selected' : '';
+                            ?>
+                                <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
+                                    <?php echo htmlspecialchars($center['name']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <div class="col-md-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
                         <input type="text" class="form-control" name="search" 
@@ -109,12 +175,12 @@ $result = $stmt->get_result();
                                value="<?php echo htmlspecialchars($search); ?>">
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <input type="text" class="form-control" name="author" 
                            placeholder="Search by author..."
                            value="<?php echo htmlspecialchars($author); ?>">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select class="form-select" name="status">
                         <option value="all">All Status</option>
                         <option value="available" <?php echo $status === 'available' ? 'selected' : ''; ?>>Available</option>
@@ -143,6 +209,9 @@ $result = $stmt->get_result();
                                     <strong>Author:</strong> <?php echo htmlspecialchars($book['author']); ?><br>
                                     <strong>Shelf:</strong> <?php echo htmlspecialchars($book['shelf_number']); ?><br>
                                     <strong>School:</strong> <?php echo htmlspecialchars($book['school']); ?>
+                                    <?php if ($is_super_admin): ?>
+                                    <br><strong>Cost Center:</strong> <?php echo htmlspecialchars($book['cost_center_name']); ?>
+                                    <?php endif; ?>
                                 </p>
                                 <span class="badge bg-<?php echo $book['status'] === 'available' ? 'success' : 'warning'; ?>">
                                     <?php echo ucfirst($book['status']); ?>

@@ -9,18 +9,46 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Get statistics
-$query = "SELECT COUNT(*) as total FROM library_books";
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
+
+// Base WHERE clause for cost center filtering
+$where_clause = "";
+if (!$is_super_admin) {
+    $where_clause = " AND lb.cost_center_id = " . intval($_SESSION['cost_center_id']);
+}
+
+// Get statistics with cost center filtering
+$query = "SELECT COUNT(*) as total 
+          FROM library_books lb 
+          WHERE 1=1 " . $where_clause;
 $result = $conn->query($query);
 $total_books = $result->fetch_assoc()['total'];
 
-$query = "SELECT COUNT(*) as issued FROM library_books WHERE status = 'issued'";
+$query = "SELECT COUNT(*) as issued 
+          FROM library_books lb 
+          WHERE lb.status = 'issued'" . $where_clause;
 $result = $conn->query($query);
 $issued_books = $result->fetch_assoc()['issued'];
 
-$query = "SELECT COUNT(*) as overdue FROM book_issues WHERE status = 'overdue'";
+$query = "SELECT COUNT(*) as overdue 
+          FROM book_issues bi 
+          JOIN library_books lb ON bi.book_id = lb.id 
+          WHERE bi.status = 'overdue'" . $where_clause;
 $result = $conn->query($query);
 $overdue_books = $result->fetch_assoc()['overdue'];
+
+// Get cost center name if not super admin
+$cost_center_name = "";
+if (!$is_super_admin) {
+    $query = "SELECT name FROM cost_centers WHERE id = " . intval($_SESSION['cost_center_id']);
+    $result = $conn->query($query);
+    if ($result && $row = $result->fetch_assoc()) {
+        $cost_center_name = $row['name'];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -28,7 +56,7 @@ $overdue_books = $result->fetch_assoc()['overdue'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Library Dashboard - FMS</title>
+    <title><?php echo $cost_center_name ? "$cost_center_name Library" : "Library Dashboard"; ?> - FMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -98,6 +126,47 @@ $overdue_books = $result->fetch_assoc()['overdue'];
     <?php include 'includes/navbar.php'; ?>
 
     <div class="container py-5">
+        <?php if (!$is_super_admin): ?>
+        <div class="alert alert-info mb-4">
+            <h4 class="alert-heading mb-0">
+                <i class="fas fa-building me-2"></i>
+                <?php echo htmlspecialchars($cost_center_name); ?> Library Dashboard
+            </h4>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($is_super_admin): ?>
+        <!-- Cost Center Filter for Super Admin -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="GET" class="row g-3">
+                            <div class="col-md-8">
+                                <select name="cost_center" class="form-select">
+                                    <option value="">All Cost Centers</option>
+                                    <?php
+                                    $centers_query = "SELECT id, name FROM cost_centers ORDER BY name";
+                                    $centers_result = $conn->query($centers_query);
+                                    while ($center = $centers_result->fetch_assoc()):
+                                        $selected = (isset($_GET['cost_center']) && $_GET['cost_center'] == $center['id']) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?php echo $center['id']; ?>" <?php echo $selected; ?>>
+                                            <?php echo htmlspecialchars($center['name']); ?>
+                                        </option>
+                                    <?php endwhile; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Statistics Section -->
         <div class="row mb-5">
             <div class="col-md-4 mb-4">

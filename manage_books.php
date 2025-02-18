@@ -9,12 +9,24 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Get statistics
+// Check if super admin
+$is_super_admin = ($_SESSION['username'] === 'saim' || 
+                   $_SESSION['username'] === 'admin' || 
+                   empty($_SESSION['cost_center_id']));
+
+// Base WHERE clause for cost center filtering
+$where_clause = "";
+if (!$is_super_admin) {
+    $where_clause = " AND lb.cost_center_id = " . intval($_SESSION['cost_center_id']);
+}
+
+// Get statistics with cost center filtering
 $query = "SELECT 
     COUNT(*) as total_books,
     SUM(CASE WHEN status = 'issued' THEN 1 ELSE 0 END) as issued_books,
     SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available_books
-FROM library_books";
+FROM library_books lb
+WHERE 1=1" . $where_clause;
 $result = $conn->query($query);
 $stats = $result->fetch_assoc();
 
@@ -23,8 +35,29 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 10;
 $offset = ($page - 1) * $per_page;
 
-$books_query = "SELECT * FROM library_books ORDER BY book_number LIMIT $offset, $per_page";
-$books_result = $conn->query($books_query);
+$books_query = "SELECT lb.*, cc.name as cost_center_name 
+                FROM library_books lb
+                LEFT JOIN cost_centers cc ON lb.cost_center_id = cc.id
+                WHERE 1=1" . $where_clause . "
+                ORDER BY lb.book_number 
+                LIMIT ?, ?";
+$stmt = $conn->prepare($books_query);
+$stmt->bind_param("ii", $offset, $per_page);
+$stmt->execute();
+$books_result = $stmt->get_result();
+
+// Get cost center name for regular admin
+$cost_center_name = "";
+if (!$is_super_admin) {
+    $cc_query = "SELECT name FROM cost_centers WHERE id = ?";
+    $cc_stmt = $conn->prepare($cc_query);
+    $cc_stmt->bind_param('i', $_SESSION['cost_center_id']);
+    $cc_stmt->execute();
+    $cc_result = $cc_stmt->get_result();
+    if ($row = $cc_result->fetch_assoc()) {
+        $cost_center_name = $row['name'];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -32,7 +65,7 @@ $books_result = $conn->query($books_query);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Books - Library System</title>
+    <title><?php echo $cost_center_name ? "$cost_center_name - " : ""; ?>Manage Books - Library System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -85,6 +118,9 @@ $books_result = $conn->query($books_query);
             <a class="navbar-brand" href="#">
                 <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" alt="FMS Logo" height="40" class="me-2">
                 <i class="fas fa-book me-2"></i>Library Management
+                <?php if (!$is_super_admin): ?>
+                    - <?php echo htmlspecialchars($cost_center_name); ?>
+                <?php endif; ?>
             </a>
             <div class="ms-auto">
                 <a href="library_dashboard.php" class="nav-link text-white">
@@ -146,6 +182,9 @@ $books_result = $conn->query($books_query);
                             <th>Shelf Number</th>
                             <th>Status</th>
                             <th>School</th>
+                            <?php if ($is_super_admin): ?>
+                            <th>Cost Center</th>
+                            <?php endif; ?>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -176,6 +215,9 @@ $books_result = $conn->query($books_query);
                                 </span>
                             </td>
                             <td><?php echo htmlspecialchars($book['school']); ?></td>
+                            <?php if ($is_super_admin): ?>
+                            <td><?php echo htmlspecialchars($book['cost_center_name']); ?></td>
+                            <?php endif; ?>
                             <td>
                                 <button class="btn btn-sm btn-primary me-1" onclick="editBook(<?php echo $book['id']; ?>)">
                                     <i class="fas fa-edit"></i>
@@ -202,6 +244,25 @@ $books_result = $conn->query($books_query);
                 </div>
                 <div class="modal-body">
                     <form id="addBookForm">
+                        <?php if ($is_super_admin): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Cost Center*</label>
+                            <select name="cost_center_id" class="form-select" required>
+                                <?php
+                                $centers_query = "SELECT id, name FROM cost_centers ORDER BY name";
+                                $centers = $conn->query($centers_query);
+                                while ($center = $centers->fetch_assoc()):
+                                ?>
+                                    <option value="<?php echo $center['id']; ?>">
+                                        <?php echo htmlspecialchars($center['name']); ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+                        <?php else: ?>
+                        <input type="hidden" name="cost_center_id" value="<?php echo $_SESSION['cost_center_id']; ?>">
+                        <?php endif; ?>
+                        
                         <div class="mb-3">
                             <label class="form-label">Book Number (ISBN)*</label>
                             <input type="text" class="form-control" name="book_number" required>
@@ -266,9 +327,6 @@ $books_result = $conn->query($books_query);
         function submitBookForm() {
             const form = document.getElementById('addBookForm');
             const formData = new FormData(form);
-
-            // Debug log
-            console.log('Submitting form...');
             
             fetch('add_book.php', {
                 method: 'POST',

@@ -20,28 +20,50 @@ if (!isset($_GET['user_id'])) {
 $user_id = intval($_GET['user_id']);
 
 $query = "SELECT 
-    u.*,
-    COALESCE(u.monthly_salary, 0) as monthly_salary,
-    COALESCE(u.current_month_salary, 0) as current_month_salary
+    u.id,
+    u.username,
+    u.monthly_salary,
+    s.tax_percentage,
+    s.other_deductions,
+    s.payment_date
 FROM users u
+LEFT JOIN (
+    SELECT user_id, tax_percentage, other_deductions, payment_date 
+    FROM salaries 
+    WHERE user_id = ? 
+    ORDER BY payment_date DESC 
+    LIMIT 1
+) s ON u.id = s.user_id
 WHERE u.id = ?";
 
 $stmt = $conn->prepare($query);
-if (!$stmt) {
-    die("Prepare failed: " . $conn->error);
-}
-
-$stmt->bind_param("i", $user_id);
-if (!$stmt->execute()) {
-    die("Execute failed: " . $stmt->error);
-}
-
+$stmt->bind_param("ii", $user_id, $user_id);
+$stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
-if (!$user) {
-    die("User not found");
-}
+// Calculate all values here
+$monthly_salary = floatval($user['monthly_salary']);
+$working_days = 30; // Total working days in month
+$days_worked = 30; // You can modify this based on attendance
+$attendance_percentage = ($days_worked / $working_days) * 100;
+
+// Calculate current month salary
+$current_month_salary = ($monthly_salary / $working_days) * $days_worked;
+
+// Calculate deductions
+$tax_percentage = floatval($user['tax_percentage'] ?? 0);
+$tax_amount = ($current_month_salary * $tax_percentage) / 100;
+$other_deductions = floatval($user['other_deductions'] ?? 0);
+
+// Calculate net pay
+$net_pay = $current_month_salary - $tax_amount - $other_deductions;
+
+// Add these calculated values to user array
+$user['current_month_salary'] = $current_month_salary;
+$user['attendance_percentage'] = $attendance_percentage;
+$user['tax_amount'] = $tax_amount;
+$user['net_pay'] = $net_pay;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -218,29 +240,33 @@ if (!$user) {
             </tr>
             <tr>
                 <td>Basic Monthly Salary</td>
-                <td class="amount">PKR <?php echo number_format($user['monthly_salary'], 2); ?></td>
+                <td class="amount">PKR <?php echo number_format($monthly_salary, 2); ?></td>
             </tr>
             <tr>
                 <td>Days Worked</td>
-                <td class="amount"><?php 
-                    $percentage = ($user['current_month_salary'] / $user['monthly_salary']) * 100;
-                    echo number_format($percentage, 0) . "%";
-                ?></td>
+                <td class="amount"><?php echo $days_worked; ?> days (<?php echo number_format($attendance_percentage, 0); ?>%)</td>
             </tr>
             <tr>
                 <td>Current Month Salary</td>
-                <td class="amount">PKR <?php echo number_format($user['current_month_salary'], 2); ?></td>
+                <td class="amount">PKR <?php echo number_format($current_month_salary, 2); ?></td>
             </tr>
-            
+            <tr>
+                <td>Tax (<?php echo number_format($tax_percentage, 1); ?>%)</td>
+                <td class="amount">- PKR <?php echo number_format($tax_amount, 2); ?></td>
+            </tr>
+            <tr>
+                <td>Other Deductions</td>
+                <td class="amount">- PKR <?php echo number_format($other_deductions, 2); ?></td>
+            </tr>
             <tr class="total-row">
                 <td>Net Pay</td>
-                <td class="amount">PKR <?php echo number_format($user['current_month_salary'], 2); ?></td>
+                <td class="amount">PKR <?php echo number_format($net_pay, 2); ?></td>
             </tr>
         </table>
 
         <div class="notes">
-            <p>Note: Current month salary (PKR <?php echo number_format($user['current_month_salary'], 2); ?>) 
-            is <?php echo number_format($percentage, 1); ?>% of base monthly salary (PKR <?php echo number_format($user['monthly_salary'], 2); ?>)</p>
+            <p>Note: Current month salary (PKR <?php echo number_format($current_month_salary, 2); ?>) 
+            is calculated based on <?php echo $days_worked; ?> days worked out of <?php echo $working_days; ?> total working days.</p>
         </div>
 
         <div class="footer">

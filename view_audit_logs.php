@@ -9,47 +9,54 @@ error_reporting(E_ALL);
 // Include session.php from main directory
 require_once __DIR__ . '/session.php';
 
-// Ensure the user is an admin
-if ($_SESSION['role'] != 'admin') {
-    header("Location: user_dashboard.php");
-    exit();
-}
+// Define super admin users (only saim and admin)
+$super_admins = ['saim', 'admin'];
+$is_super_admin = in_array(strtolower($_SESSION['username']), $super_admins);
 
 // Pagination Settings
-$limit = 20; // Number of logs per page
+$limit = 20;
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int) $_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
-// Fetch total number of audit logs
-$total_logs_result = $conn->query("SELECT COUNT(*) as total FROM audit_logs");
-if (!$total_logs_result) {
-    die("Query failed (Total Logs): (" . $conn->errno . ") " . $conn->error);
-}
-$total_logs = $total_logs_result->fetch_assoc()['total'] ?? 0;
-
-// Calculate total pages
-$total_pages = ceil($total_logs / $limit);
-
-// Fetch audit logs with user details
-$stmt = $conn->prepare("SELECT audit_logs.id, users.username, audit_logs.action, audit_logs.details, audit_logs.timestamp 
-                        FROM audit_logs 
-                        LEFT JOIN users ON audit_logs.user_id = users.id 
-                        ORDER BY audit_logs.timestamp DESC 
-                        LIMIT ? OFFSET ?");
-if (!$stmt) {
-    die("Prepare failed (Fetch Audit Logs): (" . $conn->errno . ") " . $conn->error);
-}
-
-$stmt->bind_param("ii", $limit, $offset);
-if (!$stmt->execute()) {
-    die("Execute failed (Fetch Audit Logs): (" . $stmt->errno . ") " . $stmt->error);
+// Fetch audit logs based on user role
+if ($is_super_admin) {
+    // For saim and admin - show all logs
+    $sql = "SELECT a.*, u.username 
+            FROM audit_logs a 
+            LEFT JOIN users u ON a.user_id = u.id 
+            ORDER BY a.timestamp DESC 
+            LIMIT ?, ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $offset, $limit);
+} else {
+    // For regular users - show only their logs
+    $sql = "SELECT a.*, u.username 
+            FROM audit_logs a 
+            LEFT JOIN users u ON a.user_id = u.id 
+            WHERE a.user_id = ? 
+            ORDER BY a.timestamp DESC 
+            LIMIT ?, ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("iii", $_SESSION['user_id'], $offset, $limit);
 }
 
+$stmt->execute();
 $result = $stmt->get_result();
 $audit_logs = [];
+
 while ($row = $result->fetch_assoc()) {
     $audit_logs[] = $row;
 }
+
+// Get total count for pagination
+if ($is_super_admin) {
+    $total_result = $conn->query("SELECT COUNT(*) as total FROM audit_logs");
+} else {
+    $total_result = $conn->query("SELECT COUNT(*) as total FROM audit_logs WHERE user_id = " . $_SESSION['user_id']);
+}
+$total_logs = $total_result->fetch_assoc()['total'];
+$total_pages = ceil($total_logs / $limit);
+
 $stmt->close();
 ?>
 <!DOCTYPE html>
@@ -197,6 +204,27 @@ $stmt->close();
                 padding: 1rem;
             }
         }
+
+        .pagination-container {
+            margin-bottom: 2rem;
+        }
+        .page-link {
+            color: #4361ee;
+            border-radius: 0.25rem;
+            margin: 0 2px;
+            padding: 0.5rem 0.75rem;
+        }
+        .page-item.active .page-link {
+            background-color: #4361ee;
+            border-color: #4361ee;
+        }
+        .page-link:hover {
+            color: #3f37c9;
+            background-color: #e9ecef;
+        }
+        .page-item.disabled .page-link {
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -218,6 +246,15 @@ $stmt->close();
         <h2 class="section-title">
             <i class="fas fa-history me-2"></i>System Audit Logs
         </h2>
+
+        <!-- Display header based on user role -->
+        <div class="alert alert-info mb-3">
+            <?php if ($is_super_admin): ?>
+                <i class="fas fa-shield-alt"></i> Super Admin View - Showing all system logs
+            <?php else: ?>
+                <i class="fas fa-user"></i> Showing your logs only
+            <?php endif; ?>
+        </div>
 
         <!-- Display Audit Logs -->
         <div class="table-responsive">
@@ -261,29 +298,78 @@ $stmt->close();
             </table>
         </div>
 
-        <!-- Pagination -->
+        <!-- Updated Pagination Section -->
         <?php if ($total_pages > 1): ?>
-            <nav aria-label="Audit Logs Pagination">
-                <ul class="pagination">
-                    <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
-                        <a class="page-link" href="?page=<?php echo $page - 1; ?>">
-                            <i class="fas fa-chevron-left"></i>
-                        </a>
-                    </li>
-
-                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                        <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
-                            <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+            <div class="pagination-container mt-4">
+                <nav aria-label="Audit Logs Pagination">
+                    <ul class="pagination justify-content-center">
+                        <!-- First Page Button -->
+                        <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=1" title="First Page">
+                                <i class="fas fa-angles-left"></i>
+                            </a>
                         </li>
-                    <?php endfor; ?>
 
-                    <li class="page-item <?php if ($page >= $total_pages) echo 'disabled'; ?>">
-                        <a class="page-link" href="?page=<?php echo $page + 1; ?>">
-                            <i class="fas fa-chevron-right"></i>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+                        <!-- Previous Button -->
+                        <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo max(1, $page - 1); ?>" title="Previous Page">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+
+                        <?php
+                        // Calculate range of visible page numbers
+                        $range = 3; // Number of pages to show before and after current page
+                        $start_page = max(1, $page - $range);
+                        $end_page = min($total_pages, $page + $range);
+
+                        // Show first page + ellipsis if necessary
+                        if ($start_page > 1) {
+                            echo '<li class="page-item"><a class="page-link" href="?page=1">1</a></li>';
+                            if ($start_page > 2) {
+                                echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                            }
+                        }
+
+                        // Show page numbers
+                        for ($i = $start_page; $i <= $end_page; $i++) {
+                            echo '<li class="page-item ' . ($page == $i ? 'active' : '') . '">';
+                            echo '<a class="page-link" href="?page=' . $i . '">' . $i . '</a></li>';
+                        }
+
+                        // Show last page + ellipsis if necessary
+                        if ($end_page < $total_pages) {
+                            if ($end_page < $total_pages - 1) {
+                                echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                            }
+                            echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . '">' . $total_pages . '</a></li>';
+                        }
+                        ?>
+
+                        <!-- Next Button -->
+                        <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo min($total_pages, $page + 1); ?>" title="Next Page">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+
+                        <!-- Last Page Button -->
+                        <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $total_pages; ?>" title="Last Page">
+                                <i class="fas fa-angles-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+
+                <!-- Page Information -->
+                <div class="text-center mt-2">
+                    <span class="text-muted">
+                        Page <?php echo $page; ?> of <?php echo $total_pages; ?> 
+                        (Total Records: <?php echo $total_logs; ?>)
+                    </span>
+                </div>
+            </div>
         <?php endif; ?>
     </div>
 

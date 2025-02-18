@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($_POST['salaries'] as $user_id => $salary_data) {
                 $monthly_salary = floatval($salary_data['monthly_salary']);
                 $current_month_salary = floatval($salary_data['current_month_salary']);
+                $tax_percentage = floatval($salary_data['tax_percentage'] ?? 0);
+                $other_deductions = floatval($salary_data['other_deductions'] ?? 0);
 
                 if ($monthly_salary < 0 || $current_month_salary < 0) {
                     $errors[] = "Invalid salary amount for User ID: $user_id.";
@@ -39,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt_user->close();
 
                     // Insert into salaries table
-                    $stmt_salary = $conn->prepare("INSERT INTO salaries (user_id, monthly_salary, current_month_salary, payment_date) VALUES (?, ?, ?, CURRENT_DATE())");
-                    $stmt_salary->bind_param("idd", $user_id, $monthly_salary, $current_month_salary);
+                    $stmt_salary = $conn->prepare("INSERT INTO salaries (user_id, monthly_salary, current_month_salary, tax_percentage, other_deductions, payment_date) VALUES (?, ?, ?, ?, ?, CURRENT_DATE())");
+                    $stmt_salary->bind_param("idddd", $user_id, $monthly_salary, $current_month_salary, $tax_percentage, $other_deductions);
                     $stmt_salary->execute();
                     $stmt_salary->close();
 
@@ -322,8 +324,8 @@ if (empty($_SESSION['csrf_token'])) {
         <!-- Salaries Table Card -->
         <div class="card">
             <div class="card-body p-0">
-                <form method="POST" action="manage_salaries.php" id="salaryForm">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                <form id="salaryForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead>
@@ -333,6 +335,8 @@ if (empty($_SESSION['csrf_token'])) {
                                     <th class="text-end">Current Salary ($)</th>
                                     <th class="text-end px-4">New Monthly Salary ($)</th>
                                     <th class="text-end px-4">Current Month Salary ($)</th>
+                                    <th class="text-end px-4">Tax Percentage (%)</th>
+                                    <th class="text-end px-4">Other Deductions ($)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -376,6 +380,23 @@ if (empty($_SESSION['csrf_token'])) {
                                                        class="form-control salary-input text-end" 
                                                        value="<?php echo htmlspecialchars($user['current_month_salary']); ?>" 
                                                        required>
+                                            </td>
+                                            <td>
+                                                <input type="number" 
+                                                       step="0.01" 
+                                                       min="0" 
+                                                       max="100"
+                                                       name="salaries[<?php echo $user['id']; ?>][tax_percentage]" 
+                                                       class="form-control salary-input" 
+                                                       value="<?php echo isset($user['tax_percentage']) ? $user['tax_percentage'] : '0.00'; ?>">
+                                            </td>
+                                            <td>
+                                                <input type="number" 
+                                                       step="0.01" 
+                                                       min="0"
+                                                       name="salaries[<?php echo $user['id']; ?>][other_deductions]" 
+                                                       class="form-control salary-input" 
+                                                       value="<?php echo isset($user['other_deductions']) ? $user['other_deductions'] : '0.00'; ?>">
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
