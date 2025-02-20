@@ -24,8 +24,11 @@ $months = $conn->query($months_query)->fetch_all(MYSQLI_ASSOC);
             --primary-color: #4361ee;
             --secondary-color: #3f37c9;
             --accent-color: #4895ef;
+            --success-color: #2ecc71;
+            --warning-color: #f1c40f;
             --text-color: #2d3748;
             --light-color: #f8f9fa;
+            --border-radius: 15px;
         }
 
         body {
@@ -33,19 +36,20 @@ $months = $conn->query($months_query)->fetch_all(MYSQLI_ASSOC);
             background: linear-gradient(135deg, #f6f8ff 0%, #f1f4ff 100%);
             color: var(--text-color);
             font-family: 'Segoe UI', sans-serif;
+            padding: 2rem 0;
         }
 
         .page-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 0 1rem;
         }
 
-        .card {
-            background: rgba(255, 255, 255, 0.9);
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: none;
-            border-radius: 20px;
+            border-radius: var(--border-radius);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
@@ -56,96 +60,60 @@ $months = $conn->query($months_query)->fetch_all(MYSQLI_ASSOC);
             padding: 2rem;
             text-align: center;
             border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            transform: skewY(-4deg);
         }
 
         .card-header h2 {
             margin: 0;
             font-weight: 600;
+            position: relative;
+            font-size: 2rem;
         }
 
         .card-header p {
             margin: 0.5rem 0 0;
             opacity: 0.9;
-        }
-
-        .card-body {
-            padding: 3rem;
-        }
-
-        .form-group {
-            margin-bottom: 2rem;
+            font-size: 1.1rem;
             position: relative;
         }
 
-        .form-label {
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-            color: var(--text-color);
-        }
-
-        .form-control, .form-select {
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background-color: white;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1);
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--primary-color);
-        }
-
-        .has-icon {
-            padding-left: 2.5rem;
-        }
-
-        .btn-generate {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border: none;
-            border-radius: 12px;
-            padding: 1rem 2rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-generate:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
-        }
-
-        .quick-stats {
+        .stats-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
         }
 
         .stat-card {
             background: white;
             padding: 1.5rem;
-            border-radius: 15px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             text-align: center;
-            transition: transform 0.3s ease;
         }
 
         .stat-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
 
         .stat-icon {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             background: rgba(67, 97, 238, 0.1);
             border-radius: 50%;
             display: flex;
@@ -153,10 +121,89 @@ $months = $conn->query($months_query)->fetch_all(MYSQLI_ASSOC);
             justify-content: center;
             margin: 0 auto 1rem;
             color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        .stat-card h4 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin: 0;
+        }
+
+        .stat-card p {
+            color: #6c757d;
+            margin: 0.5rem 0 0;
+            font-size: 1rem;
+        }
+
+        .form-section {
+            padding: 2rem;
+            background: white;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--text-color);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1);
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 10px;
+            padding: 1rem 2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            width: 100%;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-generate i {
+            margin-right: 0.5rem;
         }
 
         @media (max-width: 768px) {
-            .card-body {
+            .page-container {
+                padding: 1rem;
+            }
+
+            .card-header {
+                padding: 1.5rem;
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+
+            .form-section {
                 padding: 1.5rem;
             }
         }
@@ -164,34 +211,40 @@ $months = $conn->query($months_query)->fetch_all(MYSQLI_ASSOC);
 </head>
 <body>
     <div class="page-container">
-        <!-- Main Card -->
-        <div class="card">
+        <div class="main-card">
             <!-- Header -->
             <div class="card-header">
                 <h2><i class="fas fa-file-invoice me-2"></i>Payslip Generator</h2>
-                <p>Generate employee payslips with ease</p>
+                <p>Generate and manage employee payslips with ease</p>
             </div>
 
-            <!-- Quick Stats -->
-            <div class="card-body">
-                <div class="quick-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <h4><?php echo count($users); ?></h4>
-                        <p class="text-muted">Total Employees</p>
+            <!-- Stats Section -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-calendar-check"></i>
-                        </div>
-                        <h4><?php echo count($months); ?></h4>
-                        <p class="text-muted">Payment Months</p>
-                    </div>
+                    <h4><?php echo count($users); ?></h4>
+                    <p>Total Employees</p>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <h4><?php echo count($months); ?></h4>
+                    <p>Payment Periods</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h4><?php echo count($months) * count($users); ?></h4>
+                    <p>Total Payslips</p>
+                </div>
+            </div>
 
-                <!-- Form -->
+            <!-- Form Section -->
+            <div class="form-section">
                 <form id="payslipForm" action="generate_payslip.php" method="GET">
                     <div class="form-group">
                         <label class="form-label" for="user_id">
@@ -221,11 +274,9 @@ $months = $conn->query($months_query)->fetch_all(MYSQLI_ASSOC);
                         </select>
                     </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-generate">
-                            <i class="fas fa-file-download me-2"></i>Generate Payslip
-                        </button>
-                    </div>
+                    <button type="submit" class="btn btn-generate">
+                        <i class="fas fa-file-download"></i>Generate Payslip
+                    </button>
                 </form>
             </div>
         </div>

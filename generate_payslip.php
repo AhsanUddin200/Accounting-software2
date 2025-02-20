@@ -25,10 +25,11 @@ $query = "SELECT
     u.monthly_salary,
     s.tax_percentage,
     s.other_deductions,
-    s.payment_date
+    s.payment_date,
+    s.days_worked
 FROM users u
 LEFT JOIN (
-    SELECT user_id, tax_percentage, other_deductions, payment_date 
+    SELECT user_id, tax_percentage, other_deductions, payment_date, days_worked 
     FROM salaries 
     WHERE user_id = ? 
     ORDER BY payment_date DESC 
@@ -45,10 +46,10 @@ $user = $result->fetch_assoc();
 // Calculate all values here
 $monthly_salary = floatval($user['monthly_salary']);
 $working_days = 30; // Total working days in month
-$days_worked = 30; // You can modify this based on attendance
+$days_worked = isset($user['days_worked']) ? intval($user['days_worked']) : 30; // Get actual days worked
 $attendance_percentage = ($days_worked / $working_days) * 100;
 
-// Calculate current month salary
+// Calculate current month salary based on days worked
 $current_month_salary = ($monthly_salary / $working_days) * $days_worked;
 
 // Calculate deductions
@@ -60,6 +61,7 @@ $other_deductions = floatval($user['other_deductions'] ?? 0);
 $net_pay = $current_month_salary - $tax_amount - $other_deductions;
 
 // Add these calculated values to user array
+$user['days_worked'] = $days_worked;
 $user['current_month_salary'] = $current_month_salary;
 $user['attendance_percentage'] = $attendance_percentage;
 $user['tax_amount'] = $tax_amount;

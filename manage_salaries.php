@@ -20,43 +20,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle updating monthly_salary and current_month_salary
         if (isset($_POST['salaries']) && is_array($_POST['salaries'])) {
             foreach ($_POST['salaries'] as $user_id => $salary_data) {
-                $monthly_salary = floatval($salary_data['monthly_salary']);
-                $current_month_salary = floatval($salary_data['current_month_salary']);
-                $tax_percentage = floatval($salary_data['tax_percentage'] ?? 0);
-                $other_deductions = floatval($salary_data['other_deductions'] ?? 0);
-
-                if ($monthly_salary < 0 || $current_month_salary < 0) {
-                    $errors[] = "Invalid salary amount for User ID: $user_id.";
+                // Validate required fields
+                if (!isset($salary_data['days_worked']) || $salary_data['days_worked'] === '') {
+                    $errors[] = "Days worked must be specified for User ID: $user_id";
                     continue;
                 }
+
+                $monthly_salary = floatval($salary_data['monthly_salary']);
+                $days_worked = intval($salary_data['days_worked']);
+                
+                // Validate days worked
+                if ($days_worked < 0 || $days_worked > 30) {
+                    $errors[] = "Invalid days worked for User ID: $user_id. Must be between 0 and 30.";
+                    continue;
+                }
+
+                // Calculate current month salary based on days worked
+                $current_month_salary = ($monthly_salary / 30) * $days_worked;
+                
+                $tax_percentage = floatval($salary_data['tax_percentage'] ?? 0);
+                $other_deductions = floatval($salary_data['other_deductions'] ?? 0);
 
                 // Begin transaction
                 $conn->begin_transaction();
 
                 try {
-                    // Update 'monthly_salary' and 'current_month_salary' in 'users' table
-                    $stmt_user = $conn->prepare("UPDATE users SET monthly_salary = ?, current_month_salary = ? WHERE id = ?");
-                    $stmt_user->bind_param("ddi", $monthly_salary, $current_month_salary, $user_id);
+                    // Update users table with monthly salary
+                    $stmt_user = $conn->prepare("UPDATE users SET monthly_salary = ? WHERE id = ?");
+                    $stmt_user->bind_param("di", $monthly_salary, $user_id);
                     $stmt_user->execute();
                     $stmt_user->close();
 
-                    // Insert into salaries table
-                    $stmt_salary = $conn->prepare("INSERT INTO salaries (user_id, monthly_salary, current_month_salary, tax_percentage, other_deductions, payment_date) VALUES (?, ?, ?, ?, ?, CURRENT_DATE())");
-                    $stmt_salary->bind_param("idddd", $user_id, $monthly_salary, $current_month_salary, $tax_percentage, $other_deductions);
+                    // Insert into salaries table with all details
+                    $stmt_salary = $conn->prepare("INSERT INTO salaries (user_id, monthly_salary, current_month_salary, tax_percentage, other_deductions, days_worked, payment_date) VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE())");
+                    $stmt_salary->bind_param("iddddi", $user_id, $monthly_salary, $current_month_salary, $tax_percentage, $other_deductions, $days_worked);
                     $stmt_salary->execute();
                     $stmt_salary->close();
 
-                    // Log the action
-                    log_action($conn, $_SESSION['user_id'], 'Updated Salary', "Updated monthly salary to $$monthly_salary and current month salary to $$current_month_salary for User ID: $user_id.");
+                    // Log the action with days worked
+                    log_action($conn, $_SESSION['user_id'], 'Updated Salary', 
+                        "Updated salary for User ID: $user_id. Days worked: $days_worked, " .
+                        "Monthly salary: $monthly_salary, Current month salary: $current_month_salary"
+                    );
                     
-                    // Commit transaction
                     $conn->commit();
-                    $successes[] = "Salaries updated for User ID: $user_id.";
+                    $successes[] = "Salary updated for User ID: $user_id (Days worked: $days_worked)";
 
                 } catch (Exception $e) {
-                    // Rollback transaction on error
                     $conn->rollback();
-                    $errors[] = "Failed to update salaries for User ID: $user_id. Error: " . $e->getMessage();
+                    $errors[] = "Failed to update salary for User ID: $user_id. Error: " . $e->getMessage();
                 }
             }
         }
@@ -332,11 +344,12 @@ if (empty($_SESSION['csrf_token'])) {
                                 <tr>
                                     <th class="px-4">Employee ID</th>
                                     <th>Employee Name</th>
-                                    <th class="text-end">Current Salary ($)</th>
-                                    <th class="text-end px-4">New Monthly Salary ($)</th>
-                                    <th class="text-end px-4">Current Month Salary ($)</th>
-                                    <th class="text-end px-4">Tax Percentage (%)</th>
-                                    <th class="text-end px-4">Other Deductions ($)</th>
+                                    <th class="text-end">Monthly Salary ($)</th>
+                                    <th class="text-end">Days Worked</th>
+                                    <th class="text-end">Current Month Salary ($)</th>
+                                    <th class="text-end">Tax Percentage (%)</th>
+                                    <th class="text-end">Other Deductions ($)</th>
+                                    <th class="text-end">Payslip</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -353,33 +366,32 @@ if (empty($_SESSION['csrf_token'])) {
                                                 </div>
                                             </td>
                                             <td class="text-end">
-                                                <?php echo number_format($user['monthly_salary'], 0); ?>
+                                                <input type="number" 
+                                                       step="0.01" 
+                                                       min="0" 
+                                                       name="salaries[<?php echo $user['id']; ?>][monthly_salary]" 
+                                                       class="form-control salary-input" 
+                                                       value="<?php echo htmlspecialchars($user['monthly_salary']); ?>"
+                                                       required>
                                             </td>
-                                            <td class="text-end px-4">
-                                                <div class="d-flex align-items-center justify-content-end gap-2">
-                                                    <input type="number" 
-                                                           step="0.01" 
-                                                           min="0" 
-                                                           name="salaries[<?php echo $user['id']; ?>][monthly_salary]" 
-                                                           class="form-control salary-input text-end" 
-                                                           value="<?php echo htmlspecialchars($user['monthly_salary']); ?>" 
-                                                           required>
-                                                    <a href="generate_payslip.php?user_id=<?php echo $user['id']; ?>" 
-                                                       class="btn btn-sm btn-outline-primary" 
-                                                       target="_blank" 
-                                                       title="Generate Payslip">
-                                                        <i class="fas fa-file-invoice"></i>
-                                                    </a>
-                                                </div>
+                                            <td class="text-end">
+                                                <input type="number" 
+                                                       step="1" 
+                                                       min="0" 
+                                                       max="30" 
+                                                       name="salaries[<?php echo $user['id']; ?>][days_worked]" 
+                                                       class="form-control salary-input" 
+                                                       placeholder="Enter days (0-30)"
+                                                       onchange="calculateSalary(this)"
+                                                       required>
                                             </td>
-                                            <td class="text-end px-4">
+                                            <td class="text-end">
                                                 <input type="number" 
                                                        step="0.01" 
                                                        min="0" 
                                                        name="salaries[<?php echo $user['id']; ?>][current_month_salary]" 
-                                                       class="form-control salary-input text-end" 
-                                                       value="<?php echo htmlspecialchars($user['current_month_salary']); ?>" 
-                                                       required>
+                                                       class="form-control salary-input" 
+                                                       readonly>
                                             </td>
                                             <td>
                                                 <input type="number" 
@@ -397,6 +409,12 @@ if (empty($_SESSION['csrf_token'])) {
                                                        name="salaries[<?php echo $user['id']; ?>][other_deductions]" 
                                                        class="form-control salary-input" 
                                                        value="<?php echo isset($user['other_deductions']) ? $user['other_deductions'] : '0.00'; ?>">
+                                            </td>
+                                            <td>
+                                                <a href="select_payslip.php?user_id=<?php echo $user['id']; ?>" 
+                                                   class="btn btn-info btn-sm">
+                                                    <i class="fas fa-file-invoice"></i> Payslip
+                                                </a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -482,6 +500,45 @@ This action will:
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     this.blur();
+                }
+            });
+        });
+
+        function calculateSalary(input) {
+            const row = input.closest('tr');
+            const daysWorked = parseInt(input.value) || 0;
+            const monthlySalary = parseFloat(row.querySelector('input[name$="[monthly_salary]"]').value) || 0;
+            
+            // Validate days worked
+            if (daysWorked < 0) {
+                input.value = 0;
+                alert('Days worked cannot be negative');
+                return;
+            }
+            if (daysWorked > 30) {
+                input.value = 30;
+                alert('Days worked cannot exceed 30');
+                return;
+            }
+            
+            // Calculate current month salary based on days worked
+            const currentMonthSalary = (monthlySalary / 30) * daysWorked;
+            
+            // Update current month salary field
+            const currentMonthInput = row.querySelector('input[name$="[current_month_salary]"]');
+            currentMonthInput.value = currentMonthSalary.toFixed(2);
+            
+            // Optional: Show calculation details
+            console.log(`Calculation: (${monthlySalary} / 30) * ${daysWorked} = ${currentMonthSalary}`);
+        }
+
+        // Also recalculate when monthly salary changes
+        document.querySelectorAll('input[name$="[monthly_salary]"]').forEach(input => {
+            input.addEventListener('change', function() {
+                const row = this.closest('tr');
+                const daysWorkedInput = row.querySelector('input[name$="[days_worked]"]');
+                if (daysWorkedInput.value) {
+                    calculateSalary(daysWorkedInput);
                 }
             });
         });
