@@ -677,9 +677,9 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     <a href="process_salaries.php" class="quick-action-btn btn btn-success flex-fill">
                         <i class="fas fa-tasks me-2"></i>Process Salaries
                     </a>
-                    <a href="upload_attendance.php" class="quick-action-btn btn btn-secondary flex-fill">
+                    <!-- <a href="upload_attendance.php" class="quick-action-btn btn btn-secondary flex-fill">
                         <i class="fas fa-clock me-2"></i>Upload Attendance
-                    </a>
+                    </a> -->
                     <a href="view_audit_logs.php" class="quick-action-btn btn btn-info flex-fill">
                         <i class="fas fa-history me-2"></i>View Audit Logs
                     </a>
