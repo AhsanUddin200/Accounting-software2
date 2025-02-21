@@ -3,6 +3,15 @@ require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
 
+// Check if user is logged in and has proper access
+if (!isset($_SESSION['username']) || 
+    ($_SESSION['username'] !== 'saim' && $_SESSION['username'] !== 'admin')) {
+    header("Location: unauthorized.php");
+    exit();
+}
+
+include 'includes/navbar.php';  
+
 // Ensure the user is an admin
 if ($_SESSION['role'] != 'admin') {
     header("Location: user_dashboard.php");
@@ -91,6 +100,58 @@ $users_result->close();
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+
+// Add this PHP code at the beginning of your file
+if (isset($_POST['uploadDays']) && isset($_FILES['daysFile'])) {
+    $file = $_FILES['daysFile'];
+    $errors = [];
+    $successes = [];
+
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        $handle = fopen($file['tmp_name'], 'r');
+        
+        // Skip header row
+        fgetcsv($handle);
+        
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        try {
+            while (($data = fgetcsv($handle)) !== FALSE) {
+                if (count($data) >= 2) {
+                    $employee_id = trim($data[0]);
+                    $days_worked = trim($data[1]);
+                    
+                    // Validate days
+                    if (!is_numeric($days_worked) || $days_worked < 0 || $days_worked > 30) {
+                        throw new Exception("Invalid days worked for Employee ID: $employee_id");
+                    }
+                    
+                    // Update salaries table
+                    $stmt = $conn->prepare("UPDATE salaries SET days_worked = ? WHERE user_id = ? AND MONTH(payment_date) = MONTH(CURRENT_DATE()) AND YEAR(payment_date) = YEAR(CURRENT_DATE())");
+                    $stmt->bind_param("ii", $days_worked, $employee_id);
+                    $stmt->execute();
+                    
+                    if ($stmt->affected_rows > 0) {
+                        $successes[] = "Updated days for Employee ID: $employee_id (Days: $days_worked)";
+                    } else {
+                        $errors[] = "No record found for Employee ID: $employee_id";
+                    }
+                }
+            }
+            
+            $conn->commit();
+            
+        } catch (Exception $e) {
+            $conn->rollback();
+            $errors[] = "Error: " . $e->getMessage();
+        }
+        
+        fclose($handle);
+    } else {
+        $errors[] = "File upload failed";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -116,10 +177,7 @@ if (empty($_SESSION['csrf_token'])) {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
-        .navbar {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            background: linear-gradient(to right, #1e40af, #3b82f6);
-        }
+      
 
         .card {
             border: none;
@@ -206,58 +264,7 @@ if (empty($_SESSION['csrf_token'])) {
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="#">
-            <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" alt="FMS Logo" height="40" class="me-2">
-                <i class=" me-2"></i>
-                Financial Management System
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="admin_dashboard.php">
-                            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_users.php">
-                            <i class="fas fa-users me-1"></i> Users
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_transactions.php">
-                            <i class="fas fa-exchange-alt me-1"></i> Transactions
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_categories.php">
-                            <i class="fas fa-tags me-1"></i> Categories
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="manage_salaries.php">
-                            <i class="fas fa-money-bill-wave me-1"></i> Salaries
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="financial_reports.php">
-                            <i class="fas fa-chart-bar me-1"></i> Reports
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="logout.php">
-                            <i class="fas fa-sign-out-alt me-1"></i> 
-                            Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    
 
     <!-- Main Content -->
     <div class="container py-5">
@@ -438,6 +445,38 @@ if (empty($_SESSION['csrf_token'])) {
                     </button>
                 </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Add this form after the existing salary form -->
+        <div class="card mt-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Upload Days Worked</h5>
+            </div>
+            <div class="card-body">
+                <form action="" method="POST" enctype="multipart/form-data" class="mb-3">
+                    <div class="mb-3">
+                        <label for="daysFile" class="form-label">Upload CSV File (Employee ID, Days Worked)</label>
+                        <input type="file" class="form-control" id="daysFile" name="daysFile" accept=".csv" required>
+                        <small class="text-muted">File format: CSV with columns "employee_id,days_worked"</small>
+                    </div>
+                    <button type="submit" name="uploadDays" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Upload Days
+                    </button>
+                </form>
+                
+                <div class="mt-3">
+                    <h6>Sample Format:</h6>
+                    <pre class="bg-light p-2 rounded">
+employee_id,days_worked
+1,20
+2,18
+3,22
+                    </pre>
+                    <a href="sample_days.csv" download class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-2"></i>Download Sample CSV
+                    </a>
+                </div>
             </div>
         </div>
     </div>

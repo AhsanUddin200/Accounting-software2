@@ -5,9 +5,10 @@ ini_set('display_errors', 1);
 require_once 'session.php';
 require_once 'db.php';
 
-// Check admin access
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.php");
+// Check if user is logged in and has proper access
+if (!isset($_SESSION['username']) || 
+    ($_SESSION['username'] !== 'saim' && $_SESSION['username'] !== 'admin')) {
+    header("Location: unauthorized.php");
     exit();
 }
 

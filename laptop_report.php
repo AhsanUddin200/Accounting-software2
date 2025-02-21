@@ -7,9 +7,10 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Ensure user has appropriate permissions
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.php");
+// Check if user is logged in and has proper access
+if (!isset($_SESSION['username']) || 
+    ($_SESSION['username'] !== 'saim' && $_SESSION['username'] !== 'admin')) {
+    header("Location: unauthorized.php");
     exit();
 }
 

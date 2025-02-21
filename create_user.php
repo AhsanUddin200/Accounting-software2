@@ -262,7 +262,7 @@ $users_result = $conn->query($users_query);
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-plus-circle me-2"></i>Create Admin User
                                 </button>
-                                <a href="manage_users.php" class="btn btn-secondary ms-2">
+                                <a href="admin_dashboard.php" class="btn btn-secondary ms-2">
                                     <i class="fas fa-times-circle me-2"></i>Cancel
                                 </a>
                             </div>

@@ -39,9 +39,9 @@ LEFT JOIN users u ON t.user_id = u.id
 LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
 WHERE 1=1 ";
 
-// Only add cost center condition for regular admins
-if (!$is_super_admin) {
-    $query .= " AND t.cost_center_id = " . intval($_SESSION['cost_center_id']);
+// If user is not saim or admin, only show their own transactions
+if ($_SESSION['username'] !== 'saim' && $_SESSION['username'] !== 'admin') {
+    $query .= " AND t.user_id = " . intval($_SESSION['user_id']);
 }
 
 // Order by most recent first and limit to last 10 transactions

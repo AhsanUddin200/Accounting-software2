@@ -236,39 +236,42 @@ $user['net_pay'] = $net_pay;
             </div>
         </div>
 
-        <table>
+        <table class="salary-details">
             <tr>
-                <th colspan="2">Earnings</th>
+                <th>Description</th>
+                <th>Earnings</th>
+                <th>Deductions</th>
             </tr>
             <tr>
-                <td>Basic Monthly Salary</td>
-                <td class="amount">PKR <?php echo number_format($monthly_salary, 2); ?></td>
+                <td>Monthly Salary</td>
+                <td class="amount-column">PKR <?php echo number_format($user['monthly_salary'], 2); ?></td>
+                <td class="amount-column">-</td>
             </tr>
             <tr>
-                <td>Days Worked</td>
-                <td class="amount"><?php echo $days_worked; ?> days (<?php echo number_format($attendance_percentage, 0); ?>%)</td>
-            </tr>
-            <tr>
-                <td>Current Month Salary</td>
-                <td class="amount">PKR <?php echo number_format($current_month_salary, 2); ?></td>
-            </tr>
-            <tr>
-                <td>Tax (<?php echo number_format($tax_percentage, 1); ?>%)</td>
-                <td class="amount">- PKR <?php echo number_format($tax_amount, 2); ?></td>
+                <td>Tax (<?php echo $user['tax_percentage']; ?>%)</td>
+                <td class="amount-column">-</td>
+                <td class="amount-column">PKR <?php echo number_format(($user['current_month_salary'] * $user['tax_percentage'] / 100), 2); ?></td>
             </tr>
             <tr>
                 <td>Other Deductions</td>
-                <td class="amount">- PKR <?php echo number_format($other_deductions, 2); ?></td>
+                <td class="amount-column">-</td>
+                <td class="amount-column">PKR <?php echo number_format($user['other_deductions'] ?? 0, 2); ?></td>
+            </tr>
+            <tr>
+                <td>Current Month Salary (Based on Days)</td>
+                <td class="amount-column">PKR <?php echo number_format($user['current_month_salary'], 2); ?></td>
+                <td class="amount-column">-</td>
             </tr>
             <tr class="total-row">
-                <td>Net Pay</td>
-                <td class="amount">PKR <?php echo number_format($net_pay, 2); ?></td>
+                <td><strong>Net Salary</strong></td>
+                <td colspan="2" class="amount-column"><strong>PKR <?php echo number_format($user['current_month_salary'] - ($user['current_month_salary'] * $user['tax_percentage'] / 100) - ($user['other_deductions'] ?? 0), 2); ?></strong></td>
             </tr>
         </table>
 
-        <div class="notes">
-            <p>Note: Current month salary (PKR <?php echo number_format($current_month_salary, 2); ?>) 
-            is calculated based on <?php echo $days_worked; ?> days worked out of <?php echo $working_days; ?> total working days.</p>
+        <div class="attendance-info">
+            <p><strong>Attendance Summary:</strong></p>
+            <p>Days Worked: <?php echo $user['days_worked']; ?></p>
+            <p>Payment Date: <?php echo date('d-m-Y', strtotime($user['payment_date'])); ?></p>
         </div>
 
         <div class="footer">

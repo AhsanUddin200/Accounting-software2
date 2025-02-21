@@ -715,7 +715,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                     ?>
                     <div class="col-auto">
     <a href="create_user.php" class="btn btn-warning" style="width: 200px; height: 70px; font-size: 16px; font-weight: bold; color: #000; display: flex; align-items: center; justify-content: center;">
-        <i class="fas fa-user-plus me-2"></i>Create Sub User
+        <i class="fas fa-user-plus me-2"></i>Create Admin User
     </a>
 </div>
                     <?php endif; ?>

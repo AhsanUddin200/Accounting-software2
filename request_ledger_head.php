@@ -6,6 +6,15 @@ require_once 'db.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Check if user is logged in and has proper access for managing requests
+if (isset($_POST['action']) && $_POST['action'] !== 'new_request') {
+    if (!isset($_SESSION['username']) || 
+        ($_SESSION['username'] !== 'saim' && $_SESSION['username'] !== 'admin')) {
+        header("Location: unauthorized.php");
+        exit();
+    }
+}
+
 // Handle both new request submission and status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['submit_request'])) {
@@ -234,7 +243,7 @@ $requests_result = $conn->query($requests_query);
                                     <i class="fas fa-plus-circle me-2"></i>New Request
                                 </a>
                             </li>
-                            <?php if (in_array($_SESSION['role'], ['admin', 'accountant'])): ?>
+                            <?php if ($_SESSION['username'] === 'saim' || $_SESSION['username'] === 'admin'): ?>
                             <li class="nav-item">
                                 <a class="nav-link" data-bs-toggle="tab" href="#manage-requests">
                                     <i class="fas fa-tasks me-2"></i>Manage Requests
@@ -312,7 +321,7 @@ $requests_result = $conn->query($requests_query);
                             </div>
 
                             <!-- Manage Requests Table -->
-                            <?php if (in_array($_SESSION['role'], ['admin', 'accountant'])): ?>
+                            <?php if ($_SESSION['username'] === 'saim' || $_SESSION['username'] === 'admin'): ?>
                             <div class="tab-pane fade" id="manage-requests">
                                 <div class="table-responsive">
                                     <table class="table table-hover">
