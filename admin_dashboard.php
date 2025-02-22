@@ -659,7 +659,7 @@ log_action($conn, $_SESSION['user_id'], 'Viewed Admin Dashboard', 'Admin accesse
                 <div class="d-flex gap-3 flex-wrap">
                     <!-- Add Import Data button -->
                     <a href="import_transactions.php" class="quick-action-btn btn btn-primary flex-fill">
-                        <i class="fas fa-file-import me-2"></i>Import Data
+                        <i class="fas fa-f  me-2"></i>Import Finja Data
                     </a>
 
                     <!-- Add Manage Sub Categories button -->

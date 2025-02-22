@@ -4,14 +4,18 @@ require_once 'db.php';
 require_once 'functions.php';
 
 // Show all categories for everyone
-$categories_query = "SELECT 
+$categories_query = "SELECT DISTINCT
     ah.id as head_id,
     ah.name as head_name,
     ac.id as category_id,
-    ac.name as category_name
+    ac.name as category_name,
+    acs.id as subcategory_id,
+    acs.name as subcategory_name
     FROM accounting_heads ah
     LEFT JOIN account_categories ac ON ac.head_id = ah.id
-    ORDER BY ah.display_order, ac.name";
+    LEFT JOIN account_subcategories acs ON acs.category_id = ac.id
+    WHERE ac.id IS NOT NULL
+    ORDER BY ah.display_order, ac.name, acs.name";
 
 // For debugging
 error_log("Categories Query: " . $categories_query);
@@ -135,10 +139,12 @@ if (isset($_GET['category_id'])) {
             <div class="row">
                 <?php
                 $current_head = '';
+                $current_category = '';
                 while($cat = $categories->fetch_assoc()):
                     if($current_head != $cat['head_name']):
                         if($current_head != '') echo '</div></div></div>';
                         $current_head = $cat['head_name'];
+                        $current_category = '';
                 ?>
                     <div class="col-md-4 mb-4">
                         <div class="card">
@@ -148,10 +154,18 @@ if (isset($_GET['category_id'])) {
                             <div class="list-group list-group-flush">
                 <?php endif; ?>
                 
-                <?php if($cat['category_id']): // Only show if category exists ?>
+                <?php if($current_category != $cat['category_name']): ?>
                     <a href="?category_id=<?php echo $cat['category_id']; ?>" 
-                       class="list-group-item list-group-item-action">
+                       class="list-group-item list-group-item-action fw-bold">
                         <?php echo htmlspecialchars($cat['category_name']); ?>
+                    </a>
+                    <?php $current_category = $cat['category_name']; ?>
+                <?php endif; ?>
+                
+                <?php if($cat['subcategory_id']): ?>
+                    <a href="?category_id=<?php echo $cat['category_id']; ?>&subcategory_id=<?php echo $cat['subcategory_id']; ?>" 
+                       class="list-group-item list-group-item-action ps-4">
+                        → <?php echo htmlspecialchars($cat['subcategory_name']); ?>
                     </a>
                 <?php endif; ?>
                 

@@ -60,13 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
                 $credit_amount = str_replace([',' , ' '], '', $data[4]);
                 $balance = str_replace([',' , ' '], '', $data[5]);
                 
-                // Set type based on debit/credit
+                // Set type based on debit/credit and handle bank accounting logic
                 if (!empty($debit_amount) && floatval($debit_amount) > 0) {
-                    $type = 'expense';  // Make sure this matches your type filter
+                    $type = 'expense';
                     $amount = floatval($debit_amount);
+                    // For bank debit (money going out), credit Finja and debit selected category
+                    $finja_entry_type = 'credit';
+                    $category_entry_type = 'debit';
                 } else if (!empty($credit_amount) && floatval($credit_amount) > 0) {
-                    $type = 'income';   // Make sure this matches your type filter
+                    $type = 'income';
                     $amount = floatval($credit_amount);
+                    // For bank credit (money coming in), debit Finja and credit selected category
+                    $finja_entry_type = 'debit';
+                    $category_entry_type = 'credit';
                 } else {
                     continue;
                 }
@@ -95,21 +101,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
                 // Generate ledger code
                 $ledger_code = ($type == 'expense' ? 'EXP' : 'INC') . date('YmdHis') . rand(100,999);
                 
-                // Insert ledger entry
+                // Insert two ledger entries: one for Finja and one for the selected category
                 $ledger_stmt = $conn->prepare("INSERT INTO ledgers (
                     voucher_number, ledger_code, transaction_id, account_type,
                     category_id, entry_type, debit, credit, description,
                     date, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                
+                ) VALUES 
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()),  -- Finja entry
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())   -- Category entry
+                ");
+
                 $entry_type = 'import';
-                
-                $ledger_stmt->bind_param("ssisssddss",
+                $finja_category_id = 'YOUR_FINJA_CATEGORY_ID'; // Replace with actual Finja category ID
+                $debit_amount = ($category_entry_type === 'debit') ? $amount : 0;
+                $credit_amount = ($category_entry_type === 'credit') ? $amount : 0;
+                $finja_debit = ($finja_entry_type === 'debit') ? $amount : 0;
+                $finja_credit = ($finja_entry_type === 'credit') ? $amount : 0;
+
+                $ledger_stmt->bind_param("ssisssddsssssisssdds",
+                    // Finja entry parameters
                     $voucher_number, $ledger_code, $transaction_id, $type,
-                    $category_id, $entry_type, $amount, $amount,
+                    $finja_category_id, $entry_type, $finja_debit, $finja_credit,
+                    $description, $date,
+                    // Category entry parameters
+                    $voucher_number, $ledger_code, $transaction_id, $type,
+                    $category_id, $entry_type, $debit_amount, $credit_amount,
                     $description, $date
                 );
-                
+
                 if (!$ledger_stmt->execute()) {
                     throw new Exception("Error inserting ledger: " . $conn->error);
                 }
@@ -222,7 +241,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['transaction_csv'])) {
 
         <div class="card">
             <div class="card-header">
-                <h4><i class="fas fa-file-import me-2"></i>Import Transaction Data</h4>
+                <h4>
+                    <img src="accountwebimages/finja-icon.png" alt="Finja" style="height: 24px; margin-right: 10px; filter: brightness(0) invert(1);">
+                    Import Finja Transaction Data
+                </h4>
             </div>
             <div class="card-body">
                 <?php if (isset($_SESSION['success'])): ?>

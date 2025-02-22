@@ -71,6 +71,7 @@ if (isset($_GET['voucher_number'])) {
         l.ledger_code,
         ah.name as head_name,
         ac.name as category_name,
+        acs.name as subcategory_name,
         cc.code as cost_center_code,
         cc.name as cost_center_name,
         l.debit,
@@ -81,6 +82,7 @@ if (isset($_GET['voucher_number'])) {
         JOIN ledgers l ON t.id = l.transaction_id
         JOIN accounting_heads ah ON t.head_id = ah.id
         JOIN account_categories ac ON t.category_id = ac.id
+        JOIN account_subcategories acs ON t.subcategory_id = acs.id
         LEFT JOIN cost_centers cc ON t.cost_center_id = cc.id
         JOIN users u ON t.user_id = u.id
         WHERE t.voucher_number = ?
@@ -262,6 +264,7 @@ if (isset($_GET['voucher_number'])) {
                 <th>Ledger Code</th>
                 <th>Account Head</th>
                 <th>Category</th>
+                <th>Subcategory</th>
                 <th>Cost Center</th>
                 <th>Description</th>
                 <th>Debit (PKR)</th>
@@ -281,6 +284,7 @@ if (isset($_GET['voucher_number'])) {
                 <td><?php echo $row['ledger_code']; ?></td>
                 <td><?php echo $row['head_name']; ?></td>
                 <td><?php echo $row['category_name']; ?></td>
+                <td><?php echo $row['subcategory_name']; ?></td>
                 <td><?php 
                     if (!empty($row['cost_center_code']) && !empty($row['cost_center_name'])) {
                         echo htmlspecialchars($row['cost_center_code'] . ' - ' . $row['cost_center_name']);
@@ -296,8 +300,7 @@ if (isset($_GET['voucher_number'])) {
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="4">Total</th>
-                <th class="text-end"></th>
+                <th colspan="6">Total</th>
                 <th class="text-end"><?php echo formatCurrency($total_debit); ?></th>
                 <th class="text-end"><?php echo formatCurrency($total_credit); ?></th>
             </tr>
