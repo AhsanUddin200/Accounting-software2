@@ -128,584 +128,140 @@ if ($_SESSION['role'] == 'admin') {
 <html>
 <head>
     <title>Financial Reports</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3f37c9;
-            --success-color: #27AE60;
-            --danger-color: #C0392B;
-            --warning-color: #f72585;
-            --info-color: #4895ef;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-        }
-
-        body {
-            background-color: #f5f6fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
         .navbar {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 1rem 0;
+            background-color: #4169E1;
         }
 
         .navbar-brand {
-            font-weight: 600;
             color: white !important;
         }
 
         .nav-link {
-            color: rgba(255,255,255,0.9) !important;
-            transition: all 0.3s ease;
-            padding: 0.8rem 1.2rem;
-            border-radius: 8px;
-            margin: 0 0.2rem;
-        }
-
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
             color: white !important;
-            transform: translateY(-1px);
         }
 
-        .nav-link i {
-            width: 20px;
+        .report-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
             text-align: center;
-            margin-right: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 100%;
         }
 
-        .stats-card {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            color: white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .stats-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stats-label {
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            opacity: 0.9;
-        }
-
-        .stats-value {
-            font-size: 2rem;
-            font-weight: 600;
-            margin: 0.5rem 0;
-        }
-
-        .filter-section {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .report-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .btn {
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: var(--primary-color);
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background: var(--secondary-color);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .btn-export {
-            background: var(--info-color);
-            color: white;
-            border: none;
-        }
-
-        .btn-export:hover {
-            background: #3d7ec9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .form-control, .form-select {
-            border-radius: 8px;
-            padding: 0.8rem 1rem;
-            border: 2px solid #e2e8f0;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-        }
-
-        .section-title {
-            color: var(--dark-color);
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--primary-color);
-        }
-
-        .table {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .table thead th {
-            background: var(--primary-color);
-            color: white;
-            font-weight: 500;
-            border: none;
-            padding: 1rem;
-        }
-
-        .table tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-        }
-
-        .table-hover tbody tr:hover {
-            background-color: rgba(67, 97, 238, 0.05);
-        }
-
-        .admin-section {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-top: 2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        @media (max-width: 768px) {
-            .stats-card {
-                margin-bottom: 1rem;
-            }
-            
-            .btn {
-                width: 100%;
-                margin-bottom: 0.5rem;
-            }
-        }
-
-        .financial-section {
-            margin-bottom: 3rem;
-        }
-        .report-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
         .report-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             transform: translateY(-5px);
+            transition: all 0.3s ease;
         }
+
         .report-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: #4361ee;
+            font-size: 3em;
+            color: #4169E1;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .card-text {
+            color: #666;
+            margin-bottom: 25px;
+            min-height: 50px;
+        }
+
+        .btn-view {
+            background-color: #4169E1;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-view:hover {
+            background-color: #2a4db7;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            padding: 40px 20px;
         }
     </style>
 </head>
-<body>
-    <!-- Navigation Bar -->
+<body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-            <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" alt="FMS Logo" height="40" class="me-2">
-                <i class=" me-2"></i>Financial Reports
+                <img src="https://images.crunchbase.com/image/upload/c_pad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1436326579/fv5juvmpaq9zxgnkueof.png" alt="FMS Logo" height="40" class="me-2">
+                Financial Reports
             </a>
             <div class="ms-auto">
-                <a href="<?php echo $_SESSION['role'] == 'admin' ? 'admin_dashboard.php' : 'user_dashboard.php'; ?>" 
-                   class="nav-link">
+                <a href="<?php echo $_SESSION['role'] == 'admin' ? 'admin_dashboard.php' : 'user_dashboard.php'; ?>" class="nav-link">
                     <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
                 </a>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <!-- New Financial Reports Section -->
-        <div class="financial-section">
-            <h2 class="mb-4">Financial Reports</h2>
-            <div class="row">
-                <!-- Ledgers -->
-                <div class="col-md-6 mb-4">
-                    <div class="report-card text-center">
-                        <div class="report-icon">
-                            <i class="fas fa-book"></i>
-                        </div>
-                        <h4>Ledgers</h4>
-                        <p>View and manage detailed ledger entries for all accounts</p>
-                        <a href="view_ledgers.php" class="btn btn-primary">View Ledgers</a>
-                    </div>
-                </div>
-
-                <!-- Trial Balance -->
-                <div class="col-md-6 mb-4">
-                    <div class="report-card text-center">
-                        <div class="report-icon">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <h4>Trial Balance</h4>
-                        <p>View the trial balance report showing debits and credits</p>
-                        <a href="new_trial_balance.php" class="btn btn-primary">View Trial Balance</a>
-                    </div>
-                </div>
-
-                <!-- Income Statement -->
-                <div class="col-md-6 mb-4">
-                    <div class="report-card text-center">
-                        <div class="report-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <h4>Income Statement</h4>
-                        <p>View profit and loss statement for selected periods</p>
-                        <a href="income_statement.php" class="btn btn-primary">View Income Statement</a>
-                    </div>
-                </div>
-
-                <!-- Balance Sheet -->
-                <div class="col-md-6 mb-4">
-                    <div class="report-card text-center">
-                        <div class="report-icon">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                        </div>
-                        <h4>Balance Sheet</h4>
-                        <p>View assets, liabilities, and equity statement</p>
-                        <a href="balance_sheet.php" class="btn btn-primary">View Balance Sheet</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Display Success or Error Messages -->
-        <?php if (!empty($error)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo htmlspecialchars($error); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
-        <!-- Financial Overview -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="stats-card">
-                    <div class="stats-label">Total Income</div>
-                    <div class="stats-value income-text">
-                        PKR <?php echo number_format($income, 2); ?>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stats-card">
-                    <div class="stats-label">Total Expenses</div>
-                    <div class="stats-value expense-text">
-                        PKR <?php echo number_format($expenses, 2); ?>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stats-card">
-                    <div class="stats-label">Net Balance</div>
-                    <div class="stats-value balance-text">
-                        PKR <?php echo number_format($balance, 2); ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter Section -->
-        <div class="filter-section">
-            <form method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Start Date</label>
-                    <input type="date" class="form-control" name="start_date" 
-                           value="<?php echo htmlspecialchars($start_date); ?>">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">End Date</label>
-                    <input type="date" class="form-control" name="end_date" 
-                           value="<?php echo htmlspecialchars($end_date); ?>">
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="bi bi-funnel"></i> Filter
-                    </button>
-                    <a href="financial_reports.php" class="btn btn-secondary">
-                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+    <div class="container">
+        <div class="row justify-content-center">
+            <!-- First Row -->
+            <div class="col-md-5 mb-4">
+                <div class="report-card">
+                    <i class="fas fa-book-open report-icon"></i>
+                    <h3 class="card-title">Ledgers</h3>
+                    <p class="card-text">View and manage detailed ledger entries for all accounts</p>
+                    <a href="view_ledgers.php" class="btn-view">
+                        View Ledgers <i class="fas fa-arrow-right ms-2"></i>
                     </a>
                 </div>
-            </form>
-        </div>
-
-        <!-- Export Section -->
-        <div class="report-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Export Reports</h4>
-                <form method="POST" action="export_report.php">
-                    <input type="hidden" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
-                    <input type="hidden" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
-                    <button type="submit" name="export_user_report" class="btn btn-export">
-                        <i class="bi bi-download"></i> Export as CSV
-                    </button>
-                </form>
             </div>
-            <!-- Chart for User Reports -->
-            <canvas id="userReportChart" height="100"></canvas>
-        </div>
-
-        <!-- Admin Section -->
-        <?php if ($_SESSION['role'] == 'admin'): ?>
-        <div class="admin-section">
-            <h4 class="mb-4">Admin Reports</h4>
-            <form method="GET" class="row g-3">
-                <input type="hidden" name="admin_export" value="1">
-                
-                <div class="col-md-3">
-                    <label class="form-label">Select User</label>
-                    <select class="form-select" name="user_id" required>
-                        <option value="">Choose user...</option>
-                        <?php foreach ($users as $user): ?>
-                            <option value="<?php echo $user['id']; ?>" 
-                                <?php echo (isset($_GET['user_id']) && $_GET['user_id'] == $user['id']) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($user['username']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="col-md-3">
-                    <label class="form-label">Start Date</label>
-                    <input type="date" class="form-control" name="start_date_admin" 
-                           value="<?php echo isset($_GET['start_date_admin']) ? htmlspecialchars($_GET['start_date_admin']) : ''; ?>">
-                </div>
-                
-                <div class="col-md-3">
-                    <label class="form-label">End Date</label>
-                    <input type="date" class="form-control" name="end_date_admin" 
-                           value="<?php echo isset($_GET['end_date_admin']) ? htmlspecialchars($_GET['end_date_admin']) : ''; ?>">
-                </div>
-                
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">Generate Report</button>
-                </div>
-            </form>
-
-            <?php if (isset($_GET['admin_export'])): ?>
-                <div class="report-card mt-4">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="stats-label">Total Income</div>
-                            <div class="stats-value income-text">
-                                PKR <?php echo number_format($admin_income, 2); ?>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stats-label">Total Expenses</div>
-                            <div class="stats-value expense-text">
-                                PKR <?php echo number_format($admin_expenses, 2); ?>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stats-label">Net Balance</div>
-                            <div class="stats-value balance-text">
-                                PKR <?php echo number_format($admin_balance, 2); ?>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">Export Admin Report</h5>
-                        <form method="POST" action="export_report.php">
-                            <input type="hidden" name="admin_export" value="1">
-                            <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($selected_user); ?>">
-                            <input type="hidden" name="start_date_admin" value="<?php echo htmlspecialchars($start_date_admin); ?>">
-                            <input type="hidden" name="end_date_admin" value="<?php echo htmlspecialchars($end_date_admin); ?>">
-                            <button type="submit" name="export_admin_report" class="btn btn-export">
-                                <i class="bi bi-download"></i> Export as CSV
-                            </button>
-                        </form>
-                    </div>
-                    <!-- Chart for Admin Reports -->
-                    <canvas id="adminReportChart" height="100"></canvas>
-                </div>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
-
-        <!-- Charts Section -->
-        <div class="row mb-4">
-            <div class="col-md-12">
+            
+            <div class="col-md-5 mb-4">
                 <div class="report-card">
-                    <h5 class="mb-4">Income vs Expenses Over Time</h5>
-                    <canvas id="incomeExpenseChart" height="100"></canvas>
+                    <i class="fas fa-balance-scale report-icon"></i>
+                    <h3 class="card-title">Trial Balance</h3>
+                    <p class="card-text">View the trial balance report showing debits and credits</p>
+                    <a href="new_trial_balance.php" class="btn-view">
+                        View Trial Balance <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Second Row -->
+            <div class="col-md-5 mb-4">
+                <div class="report-card">
+                    <i class="fas fa-chart-line report-icon"></i>
+                    <h3 class="card-title">Income Statement</h3>
+                    <p class="card-text">View profit and loss statement for selected periods</p>
+                    <a href="income_statement.php" class="btn-view">
+                        View Income Statement <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-md-5 mb-4">
+                <div class="report-card">
+                    <i class="fas fa-file-invoice-dollar report-icon"></i>
+                    <h3 class="card-title">Balance Sheet</h3>
+                    <p class="card-text">View assets, liabilities, and equity statement</p>
+                    <a href="balance_sheet.php" class="btn-view">
+                        View Balance Sheet <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Chart.js Scripts -->
-    <script>
-        // User Report Chart
-        <?php if (!empty($start_date) && !empty($end_date)): ?>
-            // Fetch data for the chart (e.g., monthly breakdown)
-            // For simplicity, we'll use total income and expenses
-            const userReportCtx = document.getElementById('userReportChart').getContext('2d');
-            const userReportChart = new Chart(userReportCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Income', 'Expenses'],
-                    datasets: [{
-                        data: [<?php echo $income; ?>, <?php echo $expenses; ?>],
-                        backgroundColor: ['#27AE60', '#C0392B'],
-                        hoverBackgroundColor: ['#2ECC71', '#E74C3C']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        title: {
-                            display: false,
-                        }
-                    }
-                },
-            });
-        <?php endif; ?>
-
-        // Admin Report Chart
-        <?php if ($_SESSION['role'] == 'admin' && isset($_GET['admin_export'])): ?>
-            const adminReportCtx = document.getElementById('adminReportChart').getContext('2d');
-            const adminReportChart = new Chart(adminReportCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Income', 'Expenses'],
-                    datasets: [{
-                        data: [<?php echo $admin_income; ?>, <?php echo $admin_expenses; ?>],
-                        backgroundColor: ['#27AE60', '#C0392B'],
-                        hoverBackgroundColor: ['#2ECC71', '#E74C3C']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        title: {
-                            display: false,
-                        }
-                    }
-                },
-            });
-        <?php endif; ?>
-
-        // Overall Income vs Expenses Chart
-        <?php
-        // Fetch data for the overall chart
-        // Here we can create monthly data for the past 6 months
-        $months = [];
-        $income_data = [];
-        $expense_data = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month = date('Y-m', strtotime("-$i months"));
-            $months[] = date('M Y', strtotime($month));
-
-            // Income
-            $stmt = $conn->prepare("SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'income' AND DATE_FORMAT(date, '%Y-%m') = ?");
-            $stmt->bind_param("is", $_SESSION['user_id'], $month);
-            $stmt->execute();
-            $stmt->bind_result($monthly_income);
-            $stmt->fetch();
-            $income_data[] = $monthly_income ? $monthly_income : 0;
-            $stmt->close();
-
-            // Expenses
-            $stmt = $conn->prepare("SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'expense' AND DATE_FORMAT(date, '%Y-%m') = ?");
-            $stmt->bind_param("is", $_SESSION['user_id'], $month);
-            $stmt->execute();
-            $stmt->bind_result($monthly_expenses);
-            $stmt->fetch();
-            $expense_data[] = $monthly_expenses ? $monthly_expenses : 0;
-            $stmt->close();
-        }
-        ?>
-
-        const incomeExpenseCtx = document.getElementById('incomeExpenseChart').getContext('2d');
-        const incomeExpenseChart = new Chart(incomeExpenseCtx, {
-            type: 'bar',
-            data: {
-                labels: <?php echo json_encode($months); ?>,
-                datasets: [
-                    {
-                        label: 'Income',
-                        data: <?php echo json_encode($income_data); ?>,
-                        backgroundColor: '#27AE60',
-                    },
-                    {
-                        label: 'Expenses',
-                        data: <?php echo json_encode($expense_data); ?>,
-                        backgroundColor: '#C0392B',
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Income vs Expenses Over the Past 6 Months'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value, index, values) {
-                                return value;
-                            }
-                        }
-                    }
-                }
-            },
-        });
-    </script>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
