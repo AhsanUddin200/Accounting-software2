@@ -256,6 +256,13 @@ $stmt->close();
             <?php endif; ?>
         </div>
 
+        <!-- PDF Download Button -->
+        <div class="mb-3">
+            <a href="download_audit_logs.php" class="btn btn-success">
+                <i class="fas fa-file-pdf me-1"></i> Download PDF
+            </a>
+        </div>
+
         <!-- Display Audit Logs -->
         <div class="table-responsive">
             <table class="table table-hover">

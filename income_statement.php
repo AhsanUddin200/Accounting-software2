@@ -369,6 +369,7 @@ $expense_result = $stmt->get_result();
                 <i class="fas fa-file-alt mr-2"></i>
                 Back to Reports
             </a>
+            
         </div>
 
         <!-- Header Section -->
@@ -425,6 +426,14 @@ $expense_result = $stmt->get_result();
                     <h2 class="text-xl font-semibold">Income</h2>
                 </div>
                 <div class="card-body">
+                    <div class="mb-4">
+                        <button onclick="window.print()" class="btn btn-primary">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <a href="export_income_statement.php" class="btn btn-success">
+                            <i class="fas fa-file-download"></i> Save
+                        </a>
+                    </div>
                     <div class="table-responsive">
                         <table class="table">
                             <thead>
